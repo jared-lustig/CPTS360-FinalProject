@@ -4,9 +4,17 @@ int cd()
   //printf("cd: under construction READ textbook!!!!\n");
 
   // READ Chapter 11.7.3 HOW TO chdir
-
+  // If you run 'cd' without a parameter it will take you back to root
+  if(pathname[0] == '\0')
+  {
+    iput(running->cwd);
+    running->cwd = root;
+    printf("cd: root directory\n");
+    return 1;
+  }
   int ino = getino(pathname);
   MINODE *mip = iget(dev, ino);
+  // Will change to the Directory that is available.  
   if(mip) // if a DIR
   {
     iput(running->cwd);
