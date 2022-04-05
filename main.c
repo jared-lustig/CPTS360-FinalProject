@@ -27,6 +27,9 @@ int nblocks, ninodes, bmap, imap, iblk;
 char line[128], cmd[32], pathname[128];
 
 #include "cd_ls_pwd.c"
+#include "alloc.c"
+#include "mkdir_creat.c"
+#include "rmdir.c"
 
 int init()
 {
@@ -122,6 +125,12 @@ int main(int argc, char *argv[ ])
        cd();
     else if (strcmp(cmd, "pwd")==0)
        pwd(running->cwd);
+    else if (strcmp(cmd, "mkdir"))
+       mkdir(pathname);
+    else if (strcmp(cmd, "creat"))
+       creat(pathname);
+    else if (strcmp(cmd, "rmdir"))
+       rmdir(pathname);
     else if (strcmp(cmd, "quit")==0)
        quit();
   }
