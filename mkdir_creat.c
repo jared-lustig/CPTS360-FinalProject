@@ -1,4 +1,4 @@
-int mkdir(char *pathname)
+int my_mkdir(char *pathname)
 {
     // 1. if (pathname is absolute) dev = root->dev;
     if(pathname) // if pathname is absolute
@@ -9,20 +9,27 @@ int mkdir(char *pathname)
     {
         dev = running->cwd;
     }
+    printf("is it getting to this statement?\n");
     /*2. divide pathname into dirname and basename;*/
-    char *dirname;
+    char dirname[64], base[64];
+    int i;
+    for(i = strlen(pathname); pathname[i] != '/'; i--);
+    strcpy(base, &pathname[i+1]);
+    strncpy(dirname, pathname, i+1);
+
+    printf("dirname = %s, base = %s\n", dirname, base);
 
     //3. // dirname must exist and is a DIR:
-    int pino = getino(&dev, dirname);
-    MINODE *pmip = iget(dev, pino);
-    //check pmip ->INODE is a DIR
-    if(pmip)
-    {
+    // int pino = getino(&dev, dirname);
+    // MINODE *pmip = iget(dev, pino);
+    // //check pmip ->INODE is a DIR
+    // if(!S_ISDIR(pmip->INODE.i_mode)) // check if DIR
+    // {
         
-    }    
+    // }    
 
     /*4. // basename must not exist in parent DIR:*/
-    search(pmip, basename); //must return 0;
+    //search(pmip, basename); //must return 0;
 
     /*5. call kmkdir(pmip, basename) to create a DIR;
     kmkdir() consists of 4 major steps:
@@ -44,12 +51,14 @@ int mkdir(char *pathname)
 
     6. increment p
     */
+   return 0;
 }
 
-int creat(char *pathname)
-{
-    //This is similar to mkdir() except
-    //(1). the INODE.i_mode field is set to Reg file type, permission bits set to 0644 for rw-r--r--, and
-    //(2). no data block is allocated for it, so the file size is 0.
-    //(3). Do not increment parent INODE's links_count
-}
+// int creat(char *pathname)
+// {
+//     //This is similar to mkdir() except
+//     //(1). the INODE.i_mode field is set to Reg file type, permission bits set to 0644 for rw-r--r--, and
+//     //(2). no data block is allocated for it, so the file size is 0.
+//     //(3). Do not increment parent INODE's links_count
+//     return 0;
+// }

@@ -1,5 +1,5 @@
 
-int rmdir(char *pathname)
+int my_rmdir(char *pathname)
 {
     /*1. get in - memory INODE of pathname:*/
     int ino = getino(pathname);
@@ -23,14 +23,14 @@ int rmdir(char *pathname)
     MINODE *pmip = iget(mip->dev, pino);
     
     /*4. remove name from parent directory */
-    findname(pmip, ino, name); //find name from parent DIR
-    rm_child(pmip, name);
+    //findname(pmip, ino, name); //find name from parent DIR
+    //rm_child(pmip, name);
 
     /*5. deallocate its data blocks and inode */
-    truncat(mip); // deallocate INODE's data blocks
+    //truncat(mip); // deallocate INODE's data blocks
 
     //6. deallocate INODE
-    idalloc(mip->dev, mip->ino); iput(mip);
+    //idalloc(mip->dev, mip->ino); iput(mip);
 
     //7. dec parent links_count by 1;
     //mark parent dirty; iput(pmip);*/
