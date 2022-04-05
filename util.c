@@ -203,6 +203,35 @@ int findmyname(MINODE *parent, u32 myino, char myname[ ])
   // WRITE YOUR code here
   // search parent's data block for myino; SAME as search() but by myino
   // copy its name STRING to myname[ ]
+
+   int i;
+   char *cp, temp[256], sbuf[BLKSIZE];
+   for (i=0; i<12; i++){ // search DIR direct blocks only
+      if (parent->INODE.i_block[i] == 0){
+         return 0;
+      }
+      get_block(dev, parent->INODE.i_block[i], sbuf);
+      //printf("Search = %s\n", name);
+      dp = (DIR *)sbuf;
+      cp = sbuf;
+      
+      while (cp < sbuf + BLKSIZE){
+         strncpy(temp, dp->name, dp->name_len);
+         temp[dp->name_len] = 0;
+
+         //printf("name = %s, temp = %s\n", dp->name, temp);
+
+         if(dp->inode == myino)
+         {
+            strcpy(myname, temp);
+            return dp->inode;
+         }
+            
+         cp += dp->rec_len;
+         dp = (DIR *)cp;
+      }
+   }
+   return 0;
 }
 
 int findino(MINODE *mip, u32 *myino) // myino = i# of . return i# of ..
@@ -210,4 +239,18 @@ int findino(MINODE *mip, u32 *myino) // myino = i# of . return i# of ..
   // mip points at a DIR minode
   // WRITE your code here: myino = ino of .  return ino of ..
   // all in i_block[0] of this DIR INODE.
+
+   char *cp, temp[256], sbuf[BLKSIZE];
+
+   get_block(dev, mip->INODE.i_block[0], sbuf);
+   dp = (DIR *)sbuf;
+   cp = sbuf;
+
+   *myino = dp->inode;
+
+   cp += dp->rec_len;
+   dp = (DIR *)cp;
+
+   return dp->inode;
+
 }
