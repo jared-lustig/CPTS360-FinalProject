@@ -126,7 +126,11 @@ int main(int argc, char *argv[ ])
     else if (strcmp(cmd, "pwd")==0)
        pwd(running->cwd);
     else if (strcmp(cmd, "mkdir") == 0)
-       my_mkdir(pathname);
+    {
+      if(pathname[0] == '\0')
+        pathname[0] = '/';
+      my_mkdir(pathname);
+    }
     //else if (strcmp(cmd, "creat") == 0)
        //reat(pathname);
     else if (strcmp(cmd, "rmdir") == 0)

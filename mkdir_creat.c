@@ -1,15 +1,14 @@
 int my_mkdir(char *pathname)
 {
+    MINODE *mip = root;
     // 1. if (pathname is absolute) dev = root->dev;
-    if(pathname) // if pathname is absolute
+    if(*pathname != '/') // if pathname not root
     {
-        dev = root;      
+        mip = running->cwd;    
     }
-    else
-    {
-        dev = running->cwd;
-    }
-    printf("is it getting to this statement?\n");
+    
+    dev = mip->dev;
+;
     /*2. divide pathname into dirname and basename;*/
     char dirname[64], base[64];
     int i;
@@ -24,12 +23,17 @@ int my_mkdir(char *pathname)
         strcpy(base, &pathname[i+1]);
         strncpy(dirname, pathname, i+1);
     }
+
+    // char temp_pathname[256];
+    // strcpy(temp_pathname, pathname);
+    // char *parent = dirname(pathname);
+    // char *child = basename(temp_pathname);
     
-    printf("dirname = %s, base = %s\n", dirname, base);
+    //printf("dirname = %s, base = %s\n", dirname, base);
 
     //3. // dirname must exist and is a DIR:
-    int pino = getino(dirname);
-    MINODE *pmip = iget(&dev, pino);
+    int pino = getino(&dev, dirname);
+    MINODE *pmip = iget(dev, pino);
     // //check pmip ->INODE is a DIR
     if(!S_ISDIR(pmip->INODE.i_mode)) // check if DIR
     {
@@ -41,13 +45,17 @@ int my_mkdir(char *pathname)
         return -1;;
     }    
 
+    printf("ino = %d, base = %s", pino, base);
+
+    //return;
+
     /*4. // basename must not exist in parent DIR:*/
-    int exist = search(pmip, base); //must return 0;
-    if(exist != 0)
-    {
-        printf("mkdir: basename already exist, cannot make another directory the same name \n");
-        return -1;
-    }
+    // if(search(&pmip->INODE, base))
+    // {
+    //     printf("mkdir: BaseName already exists in directory\n");
+    //     return -1;
+    // }
+
     /*5. call kmkdir(pmip, basename) to create a DIR;
     kmkdir() consists of 4 major steps:*/
     kmkdir(pmip, base);
@@ -64,23 +72,26 @@ int kmkdir(MINODE *pmip, char *base)
     char buf[BLKSIZE];
     //5-1. allocate an INODE and a disk block:
     int ino = ialloc(dev), bno = balloc(dev);
-    int mip = iget(dev,ino); // load INODE into an minode;
+    MINODE *mip = iget(dev,ino); // load INODE into an minode;
 
     //5-2. initialize mip->INODE as a DIR INODE;
-    pmip->INODE.i_block[0] = bno; //other i_block[ ] are 0;
-    pmip->dirty = 1; //marking as dirty
-    iput(pmip); // write INODE back to disk
+    //pmip->INODE.i_block[0] = bno; //other i_block[ ] are 0;
+    //pmip->dirty = 1; //marking as dirty
+    //iput(pmip); // write INODE back to disk
 
 
     //5-3. make data block 0 of INODE to contain . and .. entries;
     //write to disk block blk
-    new_directory(pmip, ino, bno, buf);
+    new_directory(mip, ino, bno, buf);
+
+    mip->dirty = 1;
+    iput(mip);
 
     //5-4. enter_child(pmip, ino, basename); which enters
     //(ino, basename) as a DIR entry to the parent INODE;
     enter_child(pmip, ino, base);
 
-    return 1;
+    return 0;
 }
 
 // int creat(char *pathname)

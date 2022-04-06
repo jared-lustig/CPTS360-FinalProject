@@ -274,13 +274,15 @@ void new_directory(MINODE *pmip, int ino, int bnum, char *buf) // step 5.3 in km
 
 int enter_child(MINODE *pmip, int ino, char *name)
 {
+   printf("enter_child ...\n");
+
    char buf[BLKSIZE];
    INODE *pip = &pmip->INODE;
 
    char *cp;
    DIR *dp;
    int ideal_length = ideal_len(strlen(name));
-   int current_len;
+   int current_len = 0, remain = 0;
 
    for(int i = 0; i < 12; i++)
    {
@@ -294,20 +296,44 @@ int enter_child(MINODE *pmip, int ino, char *name)
 
       int blk = pmip->INODE.i_block[i];
       
-      while(cp + dp->rec_len < buf + BLKSIZE)
+      while(cp + dp->rec_len < buf + BLKSIZE) // + dp->rec_len?
       {
          current_len = ideal_len(dp->name_len);
          char temp[256];
          strncpy(temp, dp->name, dp->name_len);
          temp[dp->name_len] = 0;
 
-         printf("traversing\n");
+         printf("traversing -> %s\n", temp);
 
          cp += dp->rec_len;
          dp = (DIR *)cp;
+         remain = dp->rec_len - current_len;
       }
 
       //DO MORE STUFF BELLOW :)
+      current_len = ideal_len(dp->name_len);
+      remain = dp->rec_len - current_len;
+      if(remain >= ideal_len)
+      {
+         int ideal = ideal_len(dp->name_len);
+         dp->rec_len;
+
+         cp+= dp->rec_len;
+         dp = (DIR*)cp;
+
+         dp->inode = ino;
+         dp->rec_len = remain;
+         dp->name_len = strlen(name);
+
+         put_block(pmip->dev, pmip->INODE.i_block[i], buf);
+
+         return; 
+      }
+      else
+      {
+         printf("no space in existing data blocks\n");
+         return;
+      }
    }
 }
 
