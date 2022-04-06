@@ -254,3 +254,64 @@ int findino(MINODE *mip, u32 *myino) // myino = i# of . return i# of ..
    return dp->inode;
 
 }
+
+void new_directory(MINODE *pmip, int ino, int bnum, char *buf) // step 5.3 in kmkdir
+{
+   char *cp;
+   DIR *dp = (DIR *)buf;
+   dp->inode = ino;
+   dp->name_len = 1;
+   dp->rec_len = 12;
+   strncpy(dp->name, ".", 1);
+   cp = buf + 12;
+   dp = (DIR *)cp;
+   dp->inode = pmip->ino;
+   dp->name_len = 2;
+   dp->rec_len = BLKSIZE - 12;
+   strncpy(dp->name, "..", 2);
+   put_block(pmip->dev, bnum, buf);
+}
+
+int enter_child(MINODE *pmip, int ino, char *name)
+{
+   char buf[BLKSIZE];
+   INODE *pip = &pmip->INODE;
+
+   char *cp;
+   DIR *dp;
+   int ideal_length = ideal_len(strlen(name));
+   int current_len;
+
+   for(int i = 0; i < 12; i++)
+   {
+      if (pip->i_block[i] == 0)
+         break;
+
+      get_block(pmip->dev, pmip->INODE.i_block[i], buf);
+
+      dp = (DIR *)buf;
+      cp = buf;
+
+      int blk = pmip->INODE.i_block[i];
+      
+      while(cp + dp->rec_len < buf + BLKSIZE)
+      {
+         current_len = ideal_len(dp->name_len);
+         char temp[256];
+         strncpy(temp, dp->name, dp->name_len);
+         temp[dp->name_len] = 0;
+
+         printf("traversing\n");
+
+         cp += dp->rec_len;
+         dp = (DIR *)cp;
+      }
+
+      //DO MORE STUFF BELLOW :)
+   }
+}
+
+int ideal_len(int n)
+{
+   return 4 * ((8 + n + 3) / 4);
+}

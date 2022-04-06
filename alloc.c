@@ -1,29 +1,16 @@
 int tst_bit(char *buf, int bit) // in Chapter 11.3.1
 {
-    int i = bit / 8, j = bit % 8; // 8 = number of bits in a byte
-
-    if(buf[i] & (1<<j)) // if bit 1
-    {
-        return 1;
-    }
-    else // if bit 0
-    {
-        return 0;
-    }
+    return buf[bit/8] & (1<<(bit%8));
 }
 
 int set_bit(char *buf, int bit) // in Chapter 11.3.1
 {
-    int i = bit / 8, j = bit % 8; // 8 = number of bits in a byte
-
-    buf[i] |= (1<<j);
+    return buf[bit/8] |= (1<<(bit%8));
 }
 
 int clr_bit(char *buf, int bit)
 {
-    int i = bit / 8, j = bit % 8; // 8 = number of bits in a byte
-
-    buf[i] &= -(i<<j);
+    return buf[bit/8] &= ~(1<<(bit%8));
 }
 
 int decFreeInodes(int dev)
@@ -64,3 +51,25 @@ int ialloc(int dev)  // allocate an inode number from inode_bitmap
 }
 
 // WRITE YOUR OWN balloc(dev) function, which allocates a FREE disk block number
+
+int balloc(int dev)  // allocate an inode number from inode_bitmap
+{
+  int  i;
+  char buf[BLKSIZE];
+
+  // read inode_bitmap block
+  get_block(dev, imap, buf);
+
+  for (i=0; i < ninodes; i++){ // use ninodes from SUPER block
+    if (tst_bit(buf, i)==0){
+
+        set_bit(buf, i);
+	    put_block(dev, bmap, buf);
+	    decFreeInodes(dev);
+
+	    printf("allocated ino = %d\n", i+1); // bits count from 0; ino from 1
+        return i+1;
+    }
+  }
+  return 0;
+}
