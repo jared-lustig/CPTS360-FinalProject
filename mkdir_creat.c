@@ -173,7 +173,7 @@ int my_creat(char *pathname)
     MINODE *pmip = iget(dev, pino);
     // //check pmip ->INODE is a DIR
 ;
-    if(S_ISREG(pmip->INODE.i_mode)) // check if File
+    if(S_ISDIR(pmip->INODE.i_mode)) // check if File
     {
         printf("Creat: Valid Dirname\n");
     }
