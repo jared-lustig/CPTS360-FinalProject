@@ -126,6 +126,8 @@ int main(int argc, char *argv[ ])
        quit();
     else if (strcmp(cmd, "link")==0)
        link();
+    else if (strcmp(cmd, "unlink")==0)
+       unlink();
     }
 }
 

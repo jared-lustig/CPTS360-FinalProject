@@ -57,7 +57,34 @@ int link() {
 }
 
 int unlink() {
-
+    MINODE* pmip;
+    int ino = getino(pathname);
+    printf("ino = %d\n pathname = %s\n", ino, pathname);
+    MINODE* mip = iget(dev, ino);
+    if(S_ISDIR(mip->INODE.i_mode)) {
+        printf("Error: Cannon Unlink a Dir.\n");
+        return;
+    }
+    char* parent = dirname(pathname); 
+    char* child = basename(pathname);
+    printf("getting parent pino\n");
+    int pino = getino(parent);
+    printf("getting parent mino\n");
+    pmip = iget(dev, pino);
+    printf("got parent mino!\n");
+    rm_child(pmip, child);
+    pmip->dirty = 1;
+    iput(pmip);
+    mip->INODE.i_links_count--;
+    if (mip->INODE.i_links_count > 0) {
+            mip->dirty = 1; // for write INODE back to disk
+    }
+    else{ // if links_count = 0: remove filename
+        mip->refCount++;
+		mip->dirty = 1;
+		idalloc(dev, mip->ino);
+    }
+    iput(mip); // release mip
 }
 
 int symlink() {

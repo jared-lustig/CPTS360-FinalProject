@@ -24,6 +24,19 @@ extern int nblocks, ninodes, bmap, imap, iblk;
 
 extern char line[128], cmd[32], pathname[128], third[128];
 
+int tst_bit(char* buf, int bit)
+{
+	if (buf[bit / 8] & (1 << (bit % 8))) // in Chapter 11.3.1
+		return 1;
+
+	return 0;
+}
+
+void set_bit(char* buf, int bit)
+{
+	buf[bit / 8] |= (1 << (bit % 8)); // in Chapter 11.3.1
+}
+
 int get_block(int dev, int blk, char *buf)
 {
    lseek(dev, (long)blk*BLKSIZE, 0);
@@ -131,7 +144,7 @@ int search(MINODE *mip, char *name)
    char *cp, c, sbuf[BLKSIZE], temp[256];
    DIR *dp;
    INODE *ip;
-
+   
    printf("search for %s in MINODE = [%d, %d]\n", name,mip->dev,mip->ino);
    ip = &(mip->INODE);
 
@@ -195,6 +208,33 @@ int getino(char *pathname)
 
    iput(mip);
    return ino;
+}
+
+int incFreeInodes(int dev)
+{
+	char buf[BLKSIZE];
+	// inc free inodes count in SUPER and GD
+	get_block(dev, 1, buf);
+	sp = (SUPER*)buf;
+	sp->s_free_inodes_count++;
+	put_block(dev, 1, buf);
+	get_block(dev, 2, buf);
+	gp = (GD*)buf;
+	gp->bg_free_inodes_count++;
+	put_block(dev, 2, buf);
+}
+
+void decFreeInodes(int dev)
+{
+	char buf[BLKSIZE];
+	get_block(dev, 1, buf);
+	sp = (SUPER*)buf;
+	sp->s_free_inodes_count--;
+	put_block(dev, 1, buf); 
+	get_block(dev, 2, buf);
+	gp = (GD*)buf;
+	gp->bg_free_inodes_count--;
+	put_block(dev, 2, buf);
 }
 
 // These 2 functions are needed for pwd()
@@ -310,4 +350,116 @@ enter_name(MINODE *pmip, int oino, char* child) {
     }
     //Write data block to disk;
     put_block(pmip->dev, pmip->INODE.i_block[i], buf);
+}
+
+int ialloc(int dev) 
+{
+	int  i;
+	char buf[BLKSIZE];
+
+	// read imap block
+	get_block(dev, imap, buf);
+
+	for (i = 0; i < ninodes; i++) {
+		if (tst_bit(buf, i) == 0) {
+			set_bit(buf, i);
+			decFreeInodes(dev); // update free inode count in SUPER and GD
+			put_block(dev, imap, buf);
+			return i + 1;
+		}
+	}
+	return 0;
+}
+
+int idalloc(int dev, int ino)  // deallocate an ino number
+{
+	char buf[BLKSIZE];
+
+	if (ino > ninodes) {
+		printf("inumber %d out of range\n", ino);
+		return 0;
+	}
+
+	// get inode bitmap block
+	get_block(dev, imap, buf);
+	buf[(ino-1) / 8] &= ~(1 << ((ino-1) % 8));
+
+	// write buf back
+	put_block(dev, imap, buf);
+
+	// update free inode count in SUPER and GD
+	incFreeInodes(dev);
+}
+
+int bdalloc(int dev, int blk) {
+   char buf[BLKSIZE];
+
+	// get block bitmap block
+	get_block(dev, bmap, buf);
+   buf[(blk - 1) / 8] &= ~(1 << ((blk - 1) % 8));
+
+	// write buf back
+	put_block(dev, bmap, buf);
+
+	// update free inode count in SUPER and GD
+	incFreeInodes(dev);
+}
+
+void rm_child(MINODE *pmip, char *name) {
+   int i = 0;
+   char buf[BLKSIZE], temp[256];
+   char *cp;
+   DIR *dp;
+   DIR *prev;
+
+   printf("searching for ino...\n");
+   int ino = search(pmip, name);
+   printf("getting block pmip = %d, pmip->INODE.i_block[i] = %d...\n", pmip->dev, pmip->INODE.i_block[i]);
+   get_block(pmip->dev, pmip->INODE.i_block[i], buf);
+   dp = (DIR *)buf;
+   cp = buf;
+
+   // Count Entries
+   int entry_count = 1;
+   while (cp + dp->rec_len < buf + BLKSIZE){
+      cp += dp->rec_len;
+      dp = (DIR *)cp;
+      entry_count++;
+   }
+   dp = (DIR *)buf;
+   prev = (DIR *)buf;
+   cp = buf;
+   if (entry_count == 3) { // The node to be deleted is the first and only entry
+      printf("1...\n");
+      bdalloc(pmip->dev, pmip->INODE.i_block[i]);
+      return;
+   }
+   strncpy(temp, dp->name, dp->name_len);
+   temp[dp->name_len] = 0;
+   while (strcmp(name, temp) != 0){
+      prev = (DIR *)cp;
+      cp += dp->rec_len;
+      dp = (DIR *)cp;
+      entry_count--;
+      printf("entry_count = %d\n", entry_count);
+      strncpy(temp, dp->name, dp->name_len);
+      temp[dp->name_len] = 0;
+   }
+
+   if (entry_count == 1) { // The node to be deleted is the the last entry
+      printf("2...\n");
+      prev->rec_len += dp->rec_len; // Adds space from deleted node to the node just before itself.
+      put_block(pmip->dev, pmip->INODE.i_block[i], buf);
+      return;
+   }
+   else { // The node to be deleted is the first or the middle node of many
+      printf("3...\n");
+      int size = buf + BLKSIZE - (cp + dp->rec_len);
+      int space = dp->rec_len;
+      cp -= dp->rec_len;
+      dp = (DIR *)cp;
+		dp->rec_len += space;
+		memcpy(cp, (cp + space), size);
+      return;
+   }
 }
