@@ -12,8 +12,9 @@ extern PROC proc[NPROC], *running;
 
 //Mkdir_creat.c
 int my_mkdir(char *pathname);
-int kmkdir(MINODE *pmip, char *base);
-//int creat(char *pathname);
+int kmkdir(MINODE *pmip, char *base, int pino);
+int my_creat(char *pathname);
+int kcreat(MINODE *pmip, char *base, int pino);
 
 //Rmdir.c
 int my_rmdir(char *pathname);
@@ -44,8 +45,8 @@ int search(MINODE *mip, char *name);
 int getino(char *pathname);
 int findmyname(MINODE *parent, u32 myino, char myname[ ]);
 int findino(MINODE *mip, u32 *myino);
-void new_directory(MINODE *pmip, int ino, int bnum, char *buf);
-int enter_child(MINODE *pmip, int ino, char *name);
+void new_directory(int ino, int bnum, int dev);
+int enter_name(MINODE *pmip, int ino, char *name);
 int ideal_len(int n);
 
 

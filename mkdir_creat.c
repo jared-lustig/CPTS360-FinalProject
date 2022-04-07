@@ -68,34 +68,55 @@ int my_mkdir(char *pathname)
 
     /*5. call kmkdir(pmip, basename) to create a DIR;
     kmkdir() consists of 4 major steps:*/    
-    kmkdir(pmip, base);
+    kmkdir(pmip, base, pino);
 
     //6. increment parent INODE's link_count by 1 and mark pmip dirty;
     pmip->dirty = 1;
     pmip->INODE.i_links_count++;
+    iput(pmip);
     
    return 0;
 }
 
-int kmkdir(MINODE *pmip, char *base)
+int kmkdir(MINODE *pmip, char *base, int pino)
 {
+    int dir = 0;
+
     char buf[BLKSIZE];
     //5-1. allocate an INODE and a disk block:
     int ino = ialloc(dev), bno = balloc(dev);
     MINODE *mip = iget(dev,ino); // load INODE into an minode;
 
+    //INODE *ip = &mip->INODE;
+
+	/*Set all of the MINODE and INOE properties*/
+	//drwxr-xr-x
+	mip->INODE.i_mode 	  = 0x41ED; 
+	printf("i_mode set to %x\n", mip->INODE.i_mode);
+	mip->INODE.i_uid    	  = running->uid;
+	mip->INODE.i_gid  	  = running->gid;
+	mip->INODE.i_size	  = 1024;
+	mip->INODE.i_links_count = 2; 
+	mip->INODE.i_atime       = mip->INODE.i_ctime = mip->INODE.i_mtime = time(0L);
+	mip->INODE.i_blocks      = 2;
+	mip->INODE.i_block[0]    = bno;
+
+    int i = 1;
+	if (dir == 0) { i = 0; }
+	for (i = 1; i < 12; i++){
+		mip->INODE.i_block[i] = 0;
+	}
+
     //5-2. initialize mip->INODE as a DIR INODE;
     //pmip->INODE.i_block[0] = bno; //other i_block[ ] are 0;
     //pmip->dirty = 1; //marking as dirty
     //iput(pmip); // write INODE back to disk
-
-
-    //5-3. make data block 0 of INODE to contain . and .. entries;
-    //write to disk block blk
-    new_directory(mip, ino, bno, buf);
-
     mip->dirty = 1;
     iput(mip);
+    
+    //5-3. make data block 0 of INODE to contain . and .. entries;
+    //write to disk block blk
+    new_directory(ino, bno, dev);
 
     //5-4. enter_child(pmip, ino, basename); which enters
     //(ino, basename) as a DIR entry to the parent INODE;
@@ -104,11 +125,96 @@ int kmkdir(MINODE *pmip, char *base)
     return 0;
 }
 
-// int creat(char *pathname)
-// {
-//     //This is similar to mkdir() except
-//     //(1). the INODE.i_mode field is set to Reg file type, permission bits set to 0644 for rw-r--r--, and
-//     //(2). no data block is allocated for it, so the file size is 0.
-//     //(3). Do not increment parent INODE's links_count
-//     return 0;
-// }
+int my_creat(char *pathname)
+{
+    //This is similar to mkdir() except
+    //(1). the INODE.i_mode field is set to Reg file type, permission bits set to 0644 for rw-r--r--, and
+    //(2). no data block is allocated for it, so the file size is 0.
+    //(3). Do not increment parent INODE's links_count
+
+    MINODE *mip = root;
+    // 1. if (pathname is absolute) dev = root->dev;
+    if(*pathname != '/') // if pathname not root
+    {
+        mip = running->cwd;    
+    }
+    
+    dev = mip->dev;
+
+    /*2. divide pathname into dirname and basename;*/
+    char dirname[64], base[64];
+    int i;
+    for(i = strlen(pathname); pathname[i] != '/' && i != 0; i--);
+    if(i == 0) // if you are making directory within root directory
+    {
+        strcpy(base, pathname);
+        strcpy(dirname, "/");
+    }
+    else // if new directory has path included
+    {
+        strcpy(base, &pathname[i+1]);
+        strncpy(dirname, pathname, i+1);
+    }
+    
+    printf("dirname = %s, base = %s\n", dirname, base);
+
+    //3. // dirname must exist and is a DIR:
+    int pino = getino(dirname);
+    MINODE *pmip = iget(dev, pino);
+    // //check pmip ->INODE is a DIR
+;
+    if(S_ISREG(pmip->INODE.i_mode)) // check if DIR
+    {
+        printf("Creat: Valid Dirname\n");
+    }
+    else
+    {
+        printf("Creat: Invalid Dirname\n");
+        return -1;
+    }    
+
+    printf("ino = %d, base = %s", pino, base);
+
+    /*4. // basename must not exist in parent DIR:*/
+    if(search(&pmip->INODE, base))
+    {
+        printf("mkdir: BaseName already exists in directory\n");
+        return -1;
+    }
+
+    /*5. call kmkdir(pmip, basename) to create a DIR;
+    kmkdir() consists of 4 major steps:*/    
+    kmkdir(pmip, base, pino);
+
+    //6. increment parent INODE's link_count by 1 and mark pmip dirty;
+    pmip->dirty = 1;
+    pmip->INODE.i_links_count = 0;
+    iput(pmip);
+    
+   return 0;
+}
+
+int kcreat(MINODE *pmip, char *base, int pino)
+{
+    char buf[BLKSIZE];
+    //5-1. allocate an INODE and a disk block:
+    int ino = getino(pathname);
+    MINODE *mip = iget(dev,ino); // load INODE into an minode;
+
+	/*Set all of the MINODE and INOE properties*/
+	//
+	mip->INODE.i_mode 	  = 0x81ED; 
+	printf("i_mode set to %x\n", mip->INODE.i_mode);
+	mip->INODE.i_uid    	  = running->uid;
+	mip->INODE.i_gid  	  = running->gid;
+	mip->INODE.i_size	  = 0; 
+	mip->INODE.i_atime       = mip->INODE.i_ctime = mip->INODE.i_mtime = time(0L);
+	mip->INODE.i_block[0]    = 0;
+
+    mip->dirty = 1;
+    iput(mip);
+
+    enter_name(pmip, ino, base);
+
+    return 0;
+}

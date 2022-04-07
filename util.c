@@ -254,21 +254,26 @@ int findino(MINODE *mip, u32 *myino) // myino = i# of . return i# of ..
 
 }
 
-void new_directory(MINODE *pmip, int ino, int bnum, char *buf) // step 5.3 in kmkdir
+void new_directory(int ino, int bnum, int dev) // step 5.3 in kmkdir
 {
-   char *cp;
-   DIR *dp = (DIR *)buf;
+   char temp_buf[1024] = {0};
+   char *cp = temp_buf;
+   DIR *dp = (DIR *)temp_buf;
+
    dp->inode = ino;
    dp->name_len = 1;
    dp->rec_len = 12;
    strncpy(dp->name, ".", 1);
-   cp = buf + 12;
+
+   cp += dp->rec_len;
    dp = (DIR *)cp;
-   dp->inode = pmip->ino;
+
+   dp->inode = dev;
    dp->name_len = 2;
-   dp->rec_len = BLKSIZE - 12;
+   dp->rec_len = 1024 - 12;
    strncpy(dp->name, "..", 2);
-   put_block(pmip->dev, bnum, buf);
+
+   put_block(dev, bnum, temp_buf);
 }
 
 enter_name(MINODE *pmip, int oino, char* child) {
