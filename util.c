@@ -98,7 +98,6 @@ MINODE *iget(int dev, int ino)
     }
   }   
   printf("PANIC: no more free minodes\n");
-  return 0;
 }
 
 void iput(MINODE *mip)
@@ -272,69 +271,60 @@ void new_directory(MINODE *pmip, int ino, int bnum, char *buf) // step 5.3 in km
    put_block(pmip->dev, bnum, buf);
 }
 
-int enter_child(MINODE *pmip, int ino, char *name)
-{
-   printf("enter_child ...\n");
-
-   char buf[BLKSIZE];
-   INODE *pip = &pmip->INODE;
-
+enter_name(MINODE *pmip, int oino, char* child) {
+   printf("Currently inside enter_name...\n");
+   printf("oino = %d\n", oino);
    char *cp;
-   DIR *dp;
-   int ideal_length = ideal_len(strlen(name));
-   int current_len = 0, remain = 0;
+    char buf[1024];
+    int i = 0;
+    printf("Variables Defined!\n");
+   //(1). Get parent’s data block into a buf[ ];
+   printf("Creating Inode Pointer...\n");
+   INODE *ip;
+   ip = &(pmip->INODE);
+   get_block(dev, ip->i_block[0], buf);
+    if (ip->i_block[i]==0) {
+        printf("Error, No Memory in Data Block\n");
+        //Allocate a new data block; increment parent size by BLKSIZE;
+        //Enter new entry as the first entry in the new data block with rec_len¼BLKSIZE.
+    }
+    else{
+        //(2). In a data block of the parent directory, each dir_entry has an ideal length
+        printf("Reading Parent Inode...\n");
+        get_block(pmip->dev, pmip->INODE.i_block[i], buf);
+        dp = (DIR *)buf;
+        cp = buf;
+        printf("Traversing Block Until Last Entry...\n");
+        while (cp + dp->rec_len < buf + BLKSIZE){
+            cp += dp->rec_len;
+            dp = (DIR *)cp;
+        }
+        // dp NOW points at last entry in block
 
-   for(int i = 0; i < 12; i++)
-   {
-      if (pip->i_block[i] == 0)
-         break;
-
-      get_block(pmip->dev, pmip->INODE.i_block[i], buf);
-
-      dp = (DIR *)buf;
-      cp = buf;
-
-      int blk = pmip->INODE.i_block[i];
-      
-      while(cp + dp->rec_len < buf + BLKSIZE) // + dp->rec_len?
-      {
-         current_len = ideal_len(dp->name_len);
-         char temp[256];
-         strncpy(temp, dp->name, dp->name_len);
-         temp[dp->name_len] = 0;
-
-         printf("traversing -> %s\n", temp);
-
-         cp += dp->rec_len;
-         dp = (DIR *)cp;
-         remain = dp->rec_len - current_len;
-      }
-
-      //DO MORE STUFF BELLOW :)
-      current_len = ideal_len(dp->name_len);
-      remain = dp->rec_len - current_len;
-      if(remain >= ideal_len)
-      {
-         int ideal = ideal_len(dp->name_len);
-         dp->rec_len;
-
-         cp+= dp->rec_len;
-         dp = (DIR*)cp;
-
-         dp->inode = ino;
-         dp->rec_len = remain;
-         dp->name_len = strlen(name);
-
-         put_block(pmip->dev, pmip->INODE.i_block[i], buf);
-
-         return; 
-      }
-      else
-      {
-         printf("no space in existing data blocks\n");
-         return;
-      }
-   }
+        int ideal_length = 4*( (11 + dp->name_len)/4 );
+        int remain = dp->rec_len - ideal_length;
+        int need_length = 4*( (11 + strlen(child))/4 );
+        printf("ideal length = %d\nremain = %d\nneed length = %d\ndp->rec_len = %d\nstrlen(child) = %d\noino = %d\n",ideal_length, remain, need_length, dp->rec_len, strlen(child), oino);
+        if (remain >= need_length){
+            printf("Creating New Entry...\n");
+            printf("Trimming Last Entry...\n");
+            dp->rec_len = ideal_length;
+            printf("Moving to New Last Entry...\n");
+            cp += dp->rec_len;
+            dp = (DIR *)cp;
+            printf("Writing New Entry...\n");
+            printf("rec_len = %d, needlen = %d\n", dp->rec_len, need_length);
+            dp->inode = oino;
+            dp->rec_len = remain;
+            dp->name_len = strlen(child);
+            strncpy(dp->name, child, dp->name_len);
+            printf("rec_len = %d, needlen = %d\n", dp->rec_len, need_length);
+            //enter the new entry as the LAST entry and 
+            //trim the previous entry rec_len to its ideal_length;
+        }
+    }
+    //Write data block to disk;
+    put_block(pmip->dev, pmip->INODE.i_block[i], buf);
 }
 
 int ideal_len(int n)

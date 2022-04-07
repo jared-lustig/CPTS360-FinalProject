@@ -11,6 +11,13 @@
 #include <time.h>
 
 #include "type.h"
+#include "functions.h" 
+
+extern int cd();
+extern char *pwd(MINODE *wd);
+extern int ls(char *pathname);
+extern int my_mkdir(char *pathname);
+extern int my_rmdir(char *pathname);
 
 extern MINODE *iget();
 
@@ -26,10 +33,10 @@ int fd, dev;
 int nblocks, ninodes, bmap, imap, iblk;
 char line[128], cmd[32], pathname[128];
 
-#include "cd_ls_pwd.c"
-#include "alloc.c"
-#include "mkdir_creat.c"
-#include "rmdir.c"
+// #include "cd_ls_pwd.c"
+// #include "alloc.c"
+// #include "mkdir_creat.c"
+// #include "rmdir.c"
 
 int init()
 {
@@ -118,11 +125,11 @@ int main(int argc, char *argv[ ])
 
     sscanf(line, "%s %s", cmd, pathname);
     printf("cmd=%s pathname=%s\n", cmd, pathname);
-  
+
     if (strcmp(cmd, "ls")==0)
        ls(pathname);
     else if (strcmp(cmd, "cd")==0)
-       cd();
+       cd(pathname);
     else if (strcmp(cmd, "pwd")==0)
        pwd(running->cwd);
     else if (strcmp(cmd, "mkdir") == 0)
@@ -134,7 +141,7 @@ int main(int argc, char *argv[ ])
     //else if (strcmp(cmd, "creat") == 0)
        //reat(pathname);
     else if (strcmp(cmd, "rmdir") == 0)
-       rmdir(pathname);
+       my_rmdir(pathname);
     else if (strcmp(cmd, "quit")==0)
        quit();
   }

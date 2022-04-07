@@ -1,5 +1,21 @@
+#include <stdio.h>
+#include <stdlib.h>
+#include <fcntl.h>
+#include <ext2fs/ext2_fs.h>
+#include <string.h>
+#include <libgen.h>
+#include <sys/stat.h>
+#include <time.h>
+
+#include "functions.h"
+
+extern int dev;
+extern MINODE *root;
+extern PROC *running;
+
 int my_mkdir(char *pathname)
 {
+    char *tester;
     MINODE *mip = root;
     // 1. if (pathname is absolute) dev = root->dev;
     if(*pathname != '/') // if pathname not root
@@ -8,7 +24,7 @@ int my_mkdir(char *pathname)
     }
     
     dev = mip->dev;
-;
+
     /*2. divide pathname into dirname and basename;*/
     char dirname[64], base[64];
     int i;
@@ -23,41 +39,35 @@ int my_mkdir(char *pathname)
         strcpy(base, &pathname[i+1]);
         strncpy(dirname, pathname, i+1);
     }
-
-    // char temp_pathname[256];
-    // strcpy(temp_pathname, pathname);
-    // char *parent = dirname(pathname);
-    // char *child = basename(temp_pathname);
     
-    //printf("dirname = %s, base = %s\n", dirname, base);
+    printf("dirname = %s, base = %s\n", dirname, base);
 
     //3. // dirname must exist and is a DIR:
-    int pino = getino(&dev, dirname);
+    int pino = getino(dirname);
     MINODE *pmip = iget(dev, pino);
     // //check pmip ->INODE is a DIR
-    if(!S_ISDIR(pmip->INODE.i_mode)) // check if DIR
+;
+    if(S_ISDIR(pmip->INODE.i_mode)) // check if DIR
     {
         printf("mkdir: Valid Dirname\n");
     }
     else
     {
         printf("mkdir: Invalid Dirname\n");
-        return -1;;
+        return -1;
     }    
 
     printf("ino = %d, base = %s", pino, base);
 
-    //return;
-
     /*4. // basename must not exist in parent DIR:*/
-    // if(search(&pmip->INODE, base))
-    // {
-    //     printf("mkdir: BaseName already exists in directory\n");
-    //     return -1;
-    // }
+    if(search(&pmip->INODE, base))
+    {
+        printf("mkdir: BaseName already exists in directory\n");
+        return -1;
+    }
 
     /*5. call kmkdir(pmip, basename) to create a DIR;
-    kmkdir() consists of 4 major steps:*/
+    kmkdir() consists of 4 major steps:*/    
     kmkdir(pmip, base);
 
     //6. increment parent INODE's link_count by 1 and mark pmip dirty;
@@ -89,7 +99,7 @@ int kmkdir(MINODE *pmip, char *base)
 
     //5-4. enter_child(pmip, ino, basename); which enters
     //(ino, basename) as a DIR entry to the parent INODE;
-    enter_child(pmip, ino, base);
+    enter_name(pmip, ino, base);
 
     return 0;
 }

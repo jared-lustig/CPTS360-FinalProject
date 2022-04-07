@@ -1,3 +1,20 @@
+#include <stdio.h>
+#include <stdlib.h>
+#include <fcntl.h>
+#include <ext2fs/ext2_fs.h>
+#include <string.h>
+#include <libgen.h>
+#include <sys/stat.h>
+#include <time.h>
+
+#include "functions.h"
+
+extern int imap;
+extern int ninodes;
+extern int bmap;
+
+extern MINODE *iget();
+
 int tst_bit(char *buf, int bit) // in Chapter 11.3.1
 {
     return buf[bit/8] & (1<<(bit%8));
