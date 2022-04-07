@@ -114,14 +114,6 @@ void iput(MINODE *mip)
  if (mip->refCount > 0) return;
  if (!mip->dirty)       return;
  
- /* write INODE back to disk */
- /**************** NOTE ******************************
-  For mountroot, we never MODIFY any loaded INODE
-                 so no need to write it back
-  FOR LATER WROK: MUST write INODE back to disk if refCount==0 && DIRTY
-
-  Write YOUR code here to write INODE back to disk
- *****************************************************/
  block = (mip->ino - 1) / 8 + iblk;
  offset = (mip->ino -1) % 8;
 
@@ -300,6 +292,7 @@ enter_name(MINODE *pmip, int oino, char* child) {
         printf("Error, No Memory in Data Block\n");
         //Allocate a new data block; increment parent size by BLKSIZE;
         //Enter new entry as the first entry in the new data block with rec_len¼BLKSIZE.
+        return;
     }
     else{
         //(2). In a data block of the parent directory, each dir_entry has an ideal length
@@ -334,10 +327,12 @@ enter_name(MINODE *pmip, int oino, char* child) {
             printf("rec_len = %d, needlen = %d\n", dp->rec_len, need_length);
             //enter the new entry as the LAST entry and 
             //trim the previous entry rec_len to its ideal_length;
+            put_block(pmip->dev, pmip->INODE.i_block[i], buf);
+            return;
         }
     }
     //Write data block to disk;
-    put_block(pmip->dev, pmip->INODE.i_block[i], buf);
+
 }
 
 int ideal_len(int n)
@@ -353,53 +348,60 @@ void rm_child(MINODE *pmip, char *name) {
    DIR *prev;
 
    printf("searching for ino...\n");
-   int ino = search(pmip, name);
+   //int ino = search(pmip, name);
    printf("getting block pmip = %d, pmip->INODE.i_block[i] = %d...\n", pmip->dev, pmip->INODE.i_block[i]);
    get_block(pmip->dev, pmip->INODE.i_block[i], buf);
    dp = (DIR *)buf;
    cp = buf;
 
-   // Count Entries
-   int entry_count = 1;
-   while (cp + dp->rec_len < buf + BLKSIZE){
-      cp += dp->rec_len;
-      dp = (DIR *)cp;
-      entry_count++;
-   }
-   dp = (DIR *)buf;
-   prev = (DIR *)buf;
-   cp = buf;
-   if (entry_count == 3) { // The node to be deleted is the first and only entry
-      printf("1...\n");
-      bdalloc(pmip->dev, pmip->INODE.i_block[i]);
-      return;
-   }
+   bzero(temp, 256);
    strncpy(temp, dp->name, dp->name_len);
    temp[dp->name_len] = 0;
-   while (strcmp(name, temp) != 0){
+   while (cp < buf + BLKSIZE){
+
+      if(strncmp(name, temp, dp->name_len) == 0)   
+      {
+
+         printf("dp->name = %s\n", dp->name);
+
+         if (dp->rec_len == BLKSIZE) { // The node to be deleted is the only entry
+            //printf("2...\n");
+            // will always have "." and "..". Only happen if we fill up an entry block and make a new block
+            printf("Only Case...\n");
+         }
+         else if (cp + dp->rec_len >= buf + BLKSIZE){ // The node to be deleted is the last entry
+            printf("Last Case...\n");
+            prev->rec_len += dp->rec_len; // Adds space from deleted node to the node just before itself.
+            put_block(pmip->dev, pmip->INODE.i_block[i], buf);
+            return;
+         }
+         else { // The node to be deleted is the first or the middle node of many
+            printf("Middle Case...\n");
+            int size = buf + BLKSIZE - (cp + dp->rec_len);
+            int space = dp->rec_len;
+
+            char *lastcp = buf;
+            DIR *lastdp = (DIR *)buf;
+
+            while (lastcp + lastdp->rec_len < buf + BLKSIZE){ 
+               lastcp += lastdp->rec_len;
+               lastdp = (DIR *)lastcp;
+            }
+
+            lastdp->rec_len += space;
+
+            memcpy(cp, (cp + dp->rec_len), size);
+
+            put_block(pmip->dev, pmip->INODE.i_block[i], buf);
+            return;
+         }
+      }
+
       prev = (DIR *)cp;
       cp += dp->rec_len;
       dp = (DIR *)cp;
-      entry_count--;
-      printf("entry_count = %d\n", entry_count);
+      bzero(temp, 256);
       strncpy(temp, dp->name, dp->name_len);
       temp[dp->name_len] = 0;
-   }
-
-   if (entry_count == 1) { // The node to be deleted is the the last entry
-      printf("2...\n");
-      prev->rec_len += dp->rec_len; // Adds space from deleted node to the node just before itself.
-      put_block(pmip->dev, pmip->INODE.i_block[i], buf);
-      return;
-   }
-   else { // The node to be deleted is the first or the middle node of many
-      printf("3...\n");
-      int size = buf + BLKSIZE - (cp + dp->rec_len);
-      int space = dp->rec_len;
-      cp -= dp->rec_len;
-      dp = (DIR *)cp;
-		dp->rec_len += space;
-		memcpy(cp, (cp + space), size);
-      return;
    }
 }

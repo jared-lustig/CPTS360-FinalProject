@@ -107,7 +107,10 @@ int ls(char *pathname)
   // printf("ls: list CWD only! YOU FINISH IT for ls pathname\n");
   // ls_dir(running->cwd);  
   if(pathname[0] == '\0')
+  {
     ls_dir(running->cwd);
+    return 0;
+  }
 
   int ino = getino(pathname);
   MINODE* mip = iget(dev, ino);

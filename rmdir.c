@@ -29,33 +29,41 @@ int my_rmdir(char *pathname)
    } 
 
    //If not busy?
+   // if(mip->refCount > 1)
+   // {
+   //    printf("refCount is busy\n");
+   //    iput(mip);
+   //    return -1;
+   // }
+
    mip->refCount = 1;
 
-   //Traverse blocks to make sure they are empty
-   int i;
-   for(i = 0; mip->INODE.i_block[i] == 0 && i < 12; i++);
-
    //Dir is empty
-   if(mip->INODE.i_links_count != 2 && i == 12)
+   if(mip->INODE.i_links_count > 2)
    {
       printf("DIrectory is not empty, cannot RMDIR.\n");
+      iput(mip);
       return -1;
    }
 
    //(3). /* get parent’s ino and inode */
-   int pino = findino(mip, ino); //get pino from .. entry in INODE.i_block[0]
-   MINODE *pmip = iget(mip->dev, pino);
+   int pino = findino(mip, &ino); //get pino from .. entry in INODE.i_block[0]
+   MINODE *pmip = iget(mip->dev, pino);   
 
    char *name;
    //(4). /* get name from parent DIR’s data block
-   findmyname(pmip, ino, &name); //find name from parent DIR338
+   findmyname(pmip, ino, name); //find name from parent DIR338
    
+   printf("name - %s\n", name);
+
    //(5).
    //EXT2 File System
    //remove name from parent directory */
    rm_child(pmip, name);
 
    //(6). dec parent links_count by 1; mark parent pimp dirty;
+   pmip->dirty = 1;
+   pmip->INODE.i_links_count--;
    iput(pmip);
 
    //(7). /* deallocate its data blocks and inode */
