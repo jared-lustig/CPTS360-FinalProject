@@ -10,6 +10,12 @@ extern char pathname[128];
 extern MINODE *root;
 extern PROC proc[NPROC], *running; 
 
+//Link_Unlink.c    
+int my_link();
+int my_unlink();
+int symlink();
+int readlink();     
+
 //Mkdir_creat.c
 int my_mkdir(char *pathname);
 int kmkdir(MINODE *pmip, char *base, int pino);
