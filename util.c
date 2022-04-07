@@ -336,3 +336,62 @@ int ideal_len(int n)
 {
    return 4 * ((8 + n + 3) / 4);
 }
+
+void rm_child(MINODE *pmip, char *name) {
+   int i = 0;
+   char buf[BLKSIZE], temp[256];
+   char *cp;
+   DIR *dp;
+   DIR *prev;
+
+   printf("searching for ino...\n");
+   int ino = search(pmip, name);
+   printf("getting block pmip = %d, pmip->INODE.i_block[i] = %d...\n", pmip->dev, pmip->INODE.i_block[i]);
+   get_block(pmip->dev, pmip->INODE.i_block[i], buf);
+   dp = (DIR *)buf;
+   cp = buf;
+
+   // Count Entries
+   int entry_count = 1;
+   while (cp + dp->rec_len < buf + BLKSIZE){
+      cp += dp->rec_len;
+      dp = (DIR *)cp;
+      entry_count++;
+   }
+   dp = (DIR *)buf;
+   prev = (DIR *)buf;
+   cp = buf;
+   if (entry_count == 3) { // The node to be deleted is the first and only entry
+      printf("1...\n");
+      bdalloc(pmip->dev, pmip->INODE.i_block[i]);
+      return;
+   }
+   strncpy(temp, dp->name, dp->name_len);
+   temp[dp->name_len] = 0;
+   while (strcmp(name, temp) != 0){
+      prev = (DIR *)cp;
+      cp += dp->rec_len;
+      dp = (DIR *)cp;
+      entry_count--;
+      printf("entry_count = %d\n", entry_count);
+      strncpy(temp, dp->name, dp->name_len);
+      temp[dp->name_len] = 0;
+   }
+
+   if (entry_count == 1) { // The node to be deleted is the the last entry
+      printf("2...\n");
+      prev->rec_len += dp->rec_len; // Adds space from deleted node to the node just before itself.
+      put_block(pmip->dev, pmip->INODE.i_block[i], buf);
+      return;
+   }
+   else { // The node to be deleted is the first or the middle node of many
+      printf("3...\n");
+      int size = buf + BLKSIZE - (cp + dp->rec_len);
+      int space = dp->rec_len;
+      cp -= dp->rec_len;
+      dp = (DIR *)cp;
+		dp->rec_len += space;
+		memcpy(cp, (cp + space), size);
+      return;
+   }
+}

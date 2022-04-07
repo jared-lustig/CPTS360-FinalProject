@@ -80,14 +80,15 @@ int my_mkdir(char *pathname)
 
 int kmkdir(MINODE *pmip, char *base, int pino)
 {
-    int dir = 0;
-
     char buf[BLKSIZE];
     //5-1. allocate an INODE and a disk block:
     int ino = ialloc(dev), bno = balloc(dev);
     MINODE *mip = iget(dev,ino); // load INODE into an minode;
 
-    //INODE *ip = &mip->INODE;
+    //5-2. initialize mip->INODE as a DIR INODE;
+    //pmip->INODE.i_block[0] = bno; //other i_block[ ] are 0;
+    //pmip->dirty = 1; //marking as dirty
+    //iput(pmip); // write INODE back to disk
 
 	/*Set all of the MINODE and INOE properties*/
 	//drwxr-xr-x
@@ -101,22 +102,30 @@ int kmkdir(MINODE *pmip, char *base, int pino)
 	mip->INODE.i_blocks      = 2;
 	mip->INODE.i_block[0]    = bno;
 
-    int i = 1;
-	if (dir == 0) { i = 0; }
-	for (i = 1; i < 12; i++){
-		mip->INODE.i_block[i] = 0;
-	}
-
-    //5-2. initialize mip->INODE as a DIR INODE;
-    //pmip->INODE.i_block[0] = bno; //other i_block[ ] are 0;
-    //pmip->dirty = 1; //marking as dirty
-    //iput(pmip); // write INODE back to disk
     mip->dirty = 1;
     iput(mip);
-    
+
     //5-3. make data block 0 of INODE to contain . and .. entries;
     //write to disk block blk
-    new_directory(ino, bno, dev);
+
+    char temp_buf[1024] = {0};
+    char *cp = temp_buf;
+    DIR *dp = (DIR *)temp_buf;
+
+    dp->inode = ino;
+    dp->name_len = 1;
+    dp->rec_len = 12;
+    strcpy(dp->name, ".");
+
+    cp += dp->rec_len;
+    dp = (DIR *)cp;
+
+    dp->inode = pino;
+    dp->name_len = 2;
+    dp->rec_len = 1024 - 12;
+    strcpy(dp->name, "..");
+
+    put_block(dev, bno, temp_buf);
 
     //5-4. enter_child(pmip, ino, basename); which enters
     //(ino, basename) as a DIR entry to the parent INODE;
@@ -124,6 +133,7 @@ int kmkdir(MINODE *pmip, char *base, int pino)
 
     return 0;
 }
+
 
 int my_creat(char *pathname)
 {
@@ -163,7 +173,7 @@ int my_creat(char *pathname)
     MINODE *pmip = iget(dev, pino);
     // //check pmip ->INODE is a DIR
 ;
-    if(S_ISREG(pmip->INODE.i_mode)) // check if DIR
+    if(S_ISREG(pmip->INODE.i_mode)) // check if File
     {
         printf("Creat: Valid Dirname\n");
     }
@@ -184,7 +194,7 @@ int my_creat(char *pathname)
 
     /*5. call kmkdir(pmip, basename) to create a DIR;
     kmkdir() consists of 4 major steps:*/    
-    kmkdir(pmip, base, pino);
+    kcreat(pmip, base, pino);
 
     //6. increment parent INODE's link_count by 1 and mark pmip dirty;
     pmip->dirty = 1;
@@ -198,18 +208,20 @@ int kcreat(MINODE *pmip, char *base, int pino)
 {
     char buf[BLKSIZE];
     //5-1. allocate an INODE and a disk block:
-    int ino = getino(pathname);
+    int ino = ialloc(dev), bno = balloc(dev);
     MINODE *mip = iget(dev,ino); // load INODE into an minode;
 
 	/*Set all of the MINODE and INOE properties*/
 	//
-	mip->INODE.i_mode 	  = 0x81ED; 
+	mip->INODE.i_mode 	  = 0x81A4; 
 	printf("i_mode set to %x\n", mip->INODE.i_mode);
 	mip->INODE.i_uid    	  = running->uid;
 	mip->INODE.i_gid  	  = running->gid;
 	mip->INODE.i_size	  = 0; 
+    mip->INODE.i_links_count = 1;
 	mip->INODE.i_atime       = mip->INODE.i_ctime = mip->INODE.i_mtime = time(0L);
 	mip->INODE.i_block[0]    = 0;
+    mip->INODE.i_block[0]    = bno;
 
     mip->dirty = 1;
     iput(mip);

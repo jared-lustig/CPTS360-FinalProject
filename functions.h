@@ -31,9 +31,12 @@ int rpwd(MINODE *wd);
 int tst_bit(char *buf, int bit);
 int set_bit(char *buf, int bit);
 int clr_bit(char *buf, int bit);
-int decFreeInodes(int dev);
+void decFreeInodes(int dev);
+int incFreeInodes(int dev);
 int ialloc(int dev);
 int balloc(int dev);
+int bdalloc(int dev, int blk);
+int idalloc(int dev, int ino);
 
 //util.c
 int get_block(int dev, int blk, char *buf);
@@ -48,6 +51,7 @@ int findino(MINODE *mip, u32 *myino);
 void new_directory(int ino, int bnum, int dev);
 int enter_name(MINODE *pmip, int ino, char *name);
 int ideal_len(int n);
+void rm_child(MINODE *pmip, char *name);
 
 
 #endif
