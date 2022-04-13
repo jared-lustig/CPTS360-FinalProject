@@ -59,5 +59,13 @@ int enter_name(MINODE *pmip, int ino, char *name);
 int ideal_len(int n);
 void rm_child(MINODE *pmip, char *name);
 
+//levelOneMinor.c
+// utime filename: change file's access time to current time
+int my_utime(char *pathname);
+// chmod oct filename: Change filename's permission bits to octal value
+int my_chmod(char *pathname);
+// stat ...
+int my_stat();
+
 
 #endif
