@@ -67,7 +67,8 @@ int my_chmod(char *pathname, char *mode);
 // stat ...
 int my_stat();
 // DecToOctal
-int DecToOctal(int num);
+int DecToOctal(char num[]);
+int power(int base, int exp);
 
 
 #endif

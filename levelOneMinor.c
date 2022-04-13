@@ -6,6 +6,7 @@
 #include <libgen.h>
 #include <sys/stat.h>
 #include <time.h>
+#include <math.h>
 
 #include "functions.h"
 
@@ -40,17 +41,33 @@ int my_chmod(char *pathname, char *mode)
 
     if(located_ino ==0 )
     {
-        printf("utime: could not find file to edit utime\n");
+        printf("chmod: could not find file to edit permissions\n");
         iput(pmip);
         return -1;
     }
 
     pmip = iget(dev, located_ino);
 
-    printf("current mode = %d\n", pmip->INODE.i_mode);
-    printf("0644 mode = %x\n", DecToOctal(0644));
+    if (!S_ISREG(pmip->INODE.i_mode))
+    {
+        printf("Cannot edit permissions to a directory\n");
+        iput(pmip);
+        return -1;
+    }
 
-    pmip->INODE.i_mode = DecToOctal(atoi(mode));
+    char newmode[64];
+    if(mode[0] == '0')
+    {
+        strcpy(newmode, "10");strcat(newmode, mode);
+    }
+    else{
+        strcpy(newmode, "100");strcat(newmode, mode);
+    }
+
+    // printf("0644 mode = %d\n", DecToOctal(newmode));
+    // printf("pmip->mode = %d\n", pmip->INODE.i_mode);
+
+    pmip->INODE.i_mode = DecToOctal(newmode);
 
     pmip->dirty = 1;
     iput(pmip);
@@ -95,13 +112,35 @@ int my_utime(char *pathname)
     iput(pmip);
 }
 
-int DecToOctal(int num)
+int DecToOctal(char num[])
 {
-    int octalNumber[100], i = 1;
-    while (num != 0)
+    int length = strlen(num) - 1;
+    int dec;
+    for(int i = 0; i <= length; i++)
     {
-        octalNumber[i++] = num % 8;
-        num = num / 8;
+        dec += ((num[i] - '0') * power(8, length - i));
+        //printf("num[i] = %c\n", num[i]);
+        //printf("length = %d\n", length - i);
+        //printf("%d * (%d ^ %d) = %d\n", (num[i] - '0'), 8, length - i, (num[i] - '0')  * power(8, length - i));
     }
-    return octalNumber;
+
+    return dec;
+}
+
+int power(int base, int exp)
+{
+    int final = base;
+    if (exp == 0)
+    {
+        return 1;
+    }
+    if (exp == 1)
+    {
+        return base;
+    }
+    for(;exp > 1; exp--)
+    {
+        final = final * base;
+    }
+    return final;
 }
