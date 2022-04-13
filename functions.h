@@ -63,9 +63,11 @@ void rm_child(MINODE *pmip, char *name);
 // utime filename: change file's access time to current time
 int my_utime(char *pathname);
 // chmod oct filename: Change filename's permission bits to octal value
-int my_chmod(char *pathname);
+int my_chmod(char *pathname, char *mode);
 // stat ...
 int my_stat();
+// DecToOctal
+int DecToOctal(int num);
 
 
 #endif
