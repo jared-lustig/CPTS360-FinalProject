@@ -21,9 +21,11 @@ int my_mkdir(char *pathname);
 int kmkdir(MINODE *pmip, char *base, int pino);
 int my_creat(char *pathname);
 int kcreat(MINODE *pmip, char *base, int pino);
+int enter_name(MINODE *pmip, int ino, char *name);
 
 //Rmdir.c
 int my_rmdir(char *pathname);
+void rm_child(MINODE *pmip, char *name);
 
 //cd_ls_pwd.c
 int cd(char *pathname);
@@ -55,9 +57,7 @@ int getino(char *pathname);
 int findmyname(MINODE *parent, u32 myino, char myname[ ]);
 int findino(MINODE *mip, u32 *myino);
 void new_directory(int ino, int bnum, int dev);
-int enter_name(MINODE *pmip, int ino, char *name);
 int ideal_len(int n);
-void rm_child(MINODE *pmip, char *name);
 
 //levelOneMinor.c
 // utime filename: change file's access time to current time

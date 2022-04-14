@@ -71,3 +71,70 @@ int my_rmdir(char *pathname)
    idalloc(mip->dev, mip->ino);
    iput(mip);
 }
+
+void rm_child(MINODE *pmip, char *name) {
+   int i = 0;
+   char buf[BLKSIZE], temp[256];
+   char *cp;
+   DIR *dp;
+   DIR *prev;
+
+   printf("searching for ino...\n");
+   //int ino = search(pmip, name);
+   printf("getting block pmip = %d, pmip->INODE.i_block[i] = %d...\n", pmip->dev, pmip->INODE.i_block[i]);
+   get_block(pmip->dev, pmip->INODE.i_block[i], buf);
+   dp = (DIR *)buf;
+   cp = buf;
+
+   bzero(temp, 256);
+   strncpy(temp, dp->name, dp->name_len);
+   temp[dp->name_len] = 0;
+   while (cp < buf + BLKSIZE){
+
+      if(strncmp(name, temp, dp->name_len) == 0)   
+      {
+
+         printf("dp->name = %s\n", dp->name);
+
+         if (dp->rec_len == BLKSIZE) { // The node to be deleted is the only entry
+            //printf("2...\n");
+            // will always have "." and "..". Only happen if we fill up an entry block and make a new block
+            printf("Only Case...\n");
+         }
+         else if (cp + dp->rec_len >= buf + BLKSIZE){ // The node to be deleted is the last entry
+            printf("Last Case...\n");
+            prev->rec_len += dp->rec_len; // Adds space from deleted node to the node just before itself.
+            put_block(pmip->dev, pmip->INODE.i_block[i], buf);
+
+            return;
+         }
+         else { // The node to be deleted is the first or the middle node of many
+            printf("Middle Case...\n");
+            int size = buf + BLKSIZE - (cp + dp->rec_len);
+            int space = dp->rec_len;
+
+            char *lastcp = buf;
+            DIR *lastdp = (DIR *)buf;
+
+            while (lastcp + lastdp->rec_len < buf + BLKSIZE){ 
+               lastcp += lastdp->rec_len;
+               lastdp = (DIR *)lastcp;
+            }
+
+            lastdp->rec_len += space;
+
+            memcpy(cp, (cp + dp->rec_len), size);
+
+            put_block(pmip->dev, pmip->INODE.i_block[i], buf);
+            return;
+         }
+      }
+
+      prev = (DIR *)cp;
+      cp += dp->rec_len;
+      dp = (DIR *)cp;
+      bzero(temp, 256);
+      strncpy(temp, dp->name, dp->name_len);
+      temp[dp->name_len] = 0;
+   }
+}
