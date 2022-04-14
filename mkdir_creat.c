@@ -96,10 +96,6 @@ int kmkdir(MINODE *pmip, char *base, int pino)
     MINODE *mip = iget(dev,ino); // load INODE into an minode;
 
     //5-2. initialize mip->INODE as a DIR INODE;
-    //pmip->INODE.i_block[0] = bno; //other i_block[ ] are 0;
-    //pmip->dirty = 1; //marking as dirty
-    //iput(pmip); // write INODE back to disk
-
 	/*Set all of the MINODE and INOE properties*/
 	//drwxr-xr-x
 	mip->INODE.i_mode 	  = 0x41ED; 
@@ -222,7 +218,7 @@ int kcreat(MINODE *pmip, char *base, int pino)
     MINODE *mip = iget(dev,ino); // load INODE into an minode;
 
 	/*Set all of the MINODE and INOE properties*/
-	//
+	//-r--rw--rw---
 	mip->INODE.i_mode 	  = 0x81A4; 
 	printf("i_mode set to %x\n", mip->INODE.i_mode);
 	mip->INODE.i_uid    	  = running->uid;
@@ -241,6 +237,11 @@ int kcreat(MINODE *pmip, char *base, int pino)
     return 0;
 }
 
+/* Enter Name 
+INPUT: MINODE, ino, new entry name 
+Description: Takes parent INODE, gets block, traverses to the last entry in the block,
+sets the new ino = oino, name = child, and rec_len = to block - 12 as the remainging space in the block 
+gets set to the last entry. PutBlock back into memory to save block. */ 
 enter_name(MINODE *pmip, int oino, char* child) {
    printf("Currently inside enter_name...\n");
    printf("oino = %d\n", oino);
