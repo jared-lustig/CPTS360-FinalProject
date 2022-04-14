@@ -14,39 +14,52 @@ extern MINODE *iget();
 extern char third[128], pathname[128];
 
 int my_link() {
+    char dirname[64], base[64];
+    int i;
+    
+    
+    printf("dirname = %s, base = %s\n", dirname, base);
     int oino = 0;
     int pino = 0;
     MINODE* omip;
     pino = getino(".");
     printf("Got Parent INO, pino = %d\n", pino);
     MINODE* pmip;
+    for(i = strlen(pathname); pathname[i] != '/' && i != 0; i--) 
+    {
+        if(i == 0) // if you are making directory within root directory
+        {
+            strcpy(base, pathname);
+            strcpy(dirname, "/");
+        }
+        else // if new directory has path included
+        {
+            strcpy(base, &pathname[i+1]);
+            strncpy(dirname, pathname, i+1);
+            int pino = getino(dirname);
+        }
+    }
+
+
+
+
     pmip = iget(dev, pino);
     printf("iget ran successfully!\n");
     int new = pmip->ino;
     printf("pmip ino = %d\n", new);
     printf("Checking if File exists...\n");
     if (search(pmip, pathname) != 0) {
-        printf("File does not Exist!\n");
-        printf("Checking if File is Actually Dir...\n");
         if(S_ISDIR(omip->INODE.i_mode)) {
             return;
         }
-        printf("File is not Dir!\n");
-        printf("Getting Old Ino...\n");
         oino = getino(pathname);
-        
-        printf("Getting Old mip...\n");
         omip = iget(dev, oino);
 
         char* parent = dirname(third); 
         char* child = basename(third);
-        printf("Getting Parent Ino...\n");
         pino = getino(parent);
-        printf("Getting Old mip...\n");
         pmip = iget(dev, pino);
         // creat entry in new parent DIR with same inode number of old_file
-        printf("Running enter_name...\n");
-        printf("oino = %d\n", oino);
         enter_name(pmip, oino, child);
         omip->INODE.i_links_count++; // inc INODE’s links_count by 1
         omip->dirty = 1; // for write back by iput(omip)
@@ -84,12 +97,4 @@ int my_unlink() {
 		idalloc(dev, mip->ino);
     }
     iput(mip); // release mip
-}
-
-int symlink() {
-
-}
-
-int readlink() {
-
 }

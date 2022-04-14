@@ -10,6 +10,8 @@
 #include "functions.h"
 
 extern int dev;
+extern char* name[];
+extern int n;
 extern MINODE *root;
 extern PROC *running;
 
@@ -18,10 +20,6 @@ int my_mkdir(char *pathname)
     char *tester;
     MINODE *mip = root;
     // 1. if (pathname is absolute) dev = root->dev;
-    if(*pathname != '/') // if pathname not root
-    {
-        mip = running->cwd;    
-    }
     
     dev = mip->dev;
 
@@ -45,7 +43,19 @@ int my_mkdir(char *pathname)
     //3. // dirname must exist and is a DIR:
     int pino = getino(dirname);
     MINODE *pmip = iget(dev, pino);
+
+    if(*pathname != '/') // if pathname not root
+    {
+        pmip = running->cwd;    
+    }
+    tokenize(dirname);
+    for (i = 0; i < n; i++) {
+        pmip = iget(dev, search(pmip, name[i]));
+    }
+
+
     // //check pmip ->INODE is a DIR
+
 ;
     if(S_ISDIR(pmip->INODE.i_mode)) // check if DIR
     {

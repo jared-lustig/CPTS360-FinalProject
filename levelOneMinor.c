@@ -10,10 +10,50 @@
 
 #include "functions.h"
 
-// int stat()
-// {
-//     return 0;
-// }
+struct my_st {
+    int st_dev;         
+    int st_ino;         
+    int st_mode;        
+    int st_nlink;  
+    int st_size;   
+    int st_uid;         
+    int st_gid;                   
+    int st_blocks;      
+    struct timespec st_atim;   
+    struct timespec st_ctim;  
+#define st_atime st_atim.tv_sec
+#define st_ctime st_ctim.tv_sec
+};
+
+
+int my_stat() {
+    struct my_st myst = {};
+    MINODE* mip;
+    int ino = getino(pathname);
+    printf("old ino = %d\npathname = %s\n", ino, pathname);
+    mip = iget(dev, ino);
+    //copy dev, ino to myst.st_dev, myst.st_ino;
+    myst.st_ino = mip->ino;
+    myst.st_dev = mip->dev;
+    //copy mip->INODE fields to myst fields;
+    myst.st_mode= mip->INODE.i_mode;
+    myst.st_uid= mip->INODE.i_uid;
+    myst.st_size= mip->INODE.i_size;
+    myst.st_gid= mip->INODE.i_gid;
+    myst.st_nlink= mip->INODE.i_links_count;
+    myst.st_blocks= mip->INODE.i_blocks;
+
+    iput(mip);
+
+    printf("Dev = %d\n", myst.st_dev);
+    printf("Ino = %d\n", myst.st_ino);
+    printf("Mode = %d\n", myst.st_mode);
+    printf("Hard links = %d\n", myst.st_nlink);
+    printf("Uid = %d\n", myst.st_uid);
+    printf("Gid = %d\n", myst.st_gid);
+    printf("Size = %d\n", myst.st_size);
+    printf("Block Count = %d\n", myst.st_blocks);
+}
 
 int my_chmod(char *pathname, char *mode)
 {
