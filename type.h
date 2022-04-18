@@ -1,3 +1,6 @@
+#ifndef TYPE
+#define TYPE
+
 /*************** type.h file for LEVEL-1 ****************/
 typedef unsigned char  u8;
 typedef unsigned short u16;
@@ -11,7 +14,7 @@ typedef struct ext2_dir_entry_2 DIR;
 SUPER *sp;
 GD    *gp;
 INODE *ip;
-DIR   *dp;
+DIR   *dp;   
 
 #define FREE        0
 #define READY       1
@@ -37,3 +40,19 @@ typedef struct proc{
   int          gid;
   MINODE      *cwd;      // CWD directory pointer  
 }PROC;
+
+typedef struct mtable{
+  int dev; // device number; 0 for FREE
+  int ninodes; // from superblock
+  int nblocks;
+  int free_blocks; // from superblock and GD
+  int free_inodes;
+  int bmap; // from group descriptor
+  int imap;
+  int iblock; // inodes start block
+  MINODE *mntDirPtr; // mount point DIR pointer
+  char devName[64]; //device name
+  char mntName[64]; // mount point DIR name
+}MTABLE;
+
+#endif

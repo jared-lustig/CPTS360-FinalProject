@@ -1,5 +1,20 @@
+#include <stdio.h>
+#include <stdlib.h>
+#include <fcntl.h>
+#include <ext2fs/ext2_fs.h>
+#include <string.h>
+#include <libgen.h>
+#include <sys/stat.h>
+#include <time.h>
+
+#include "functions.h"
+
+extern int dev;
+extern MINODE *root;
+extern PROC *running;
+
 /************* cd_ls_pwd.c file **************/
-int cd()
+int cd(char *pathname)
 {
   //printf("cd: under construction READ textbook!!!!\n");
 
@@ -92,7 +107,10 @@ int ls(char *pathname)
   // printf("ls: list CWD only! YOU FINISH IT for ls pathname\n");
   // ls_dir(running->cwd);  
   if(pathname[0] == '\0')
+  {
     ls_dir(running->cwd);
+    return 0;
+  }
 
   int ino = getino(pathname);
   MINODE* mip = iget(dev, ino);

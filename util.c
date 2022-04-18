@@ -22,20 +22,7 @@ extern int n;
 extern int fd, dev;
 extern int nblocks, ninodes, bmap, imap, iblk;
 
-extern char line[128], cmd[32], pathname[128], third[128];
-
-int tst_bit(char* buf, int bit)
-{
-	if (buf[bit / 8] & (1 << (bit % 8))) // in Chapter 11.3.1
-		return 1;
-
-	return 0;
-}
-
-void set_bit(char* buf, int bit)
-{
-	buf[bit / 8] |= (1 << (bit % 8)); // in Chapter 11.3.1
-}
+extern char line[128], cmd[32], pathname[128];
 
 int get_block(int dev, int blk, char *buf)
 {
@@ -111,7 +98,6 @@ MINODE *iget(int dev, int ino)
     }
   }   
   printf("PANIC: no more free minodes\n");
-  return 0;
 }
 
 void iput(MINODE *mip)
@@ -128,14 +114,14 @@ void iput(MINODE *mip)
  if (mip->refCount > 0) return;
  if (!mip->dirty)       return;
  
- /* write INODE back to disk */
- /**************** NOTE ******************************
-  For mountroot, we never MODIFY any loaded INODE
-                 so no need to write it back
-  FOR LATER WROK: MUST write INODE back to disk if refCount==0 && DIRTY
+ block = (mip->ino - 1) / 8 + iblk;
+ offset = (mip->ino -1) % 8;
 
-  Write YOUR code here to write INODE back to disk
- *****************************************************/
+ get_block(mip->dev, block, buf);
+ ip = (INODE *)buf + offset;
+ *ip = mip->INODE;
+ put_block(mip->dev, block, buf);
+ mip->refCount = 0;
 } 
 
 int search(MINODE *mip, char *name)
@@ -144,7 +130,7 @@ int search(MINODE *mip, char *name)
    char *cp, c, sbuf[BLKSIZE], temp[256];
    DIR *dp;
    INODE *ip;
-   
+
    printf("search for %s in MINODE = [%d, %d]\n", name,mip->dev,mip->ino);
    ip = &(mip->INODE);
 
@@ -210,33 +196,6 @@ int getino(char *pathname)
    return ino;
 }
 
-int incFreeInodes(int dev)
-{
-	char buf[BLKSIZE];
-	// inc free inodes count in SUPER and GD
-	get_block(dev, 1, buf);
-	sp = (SUPER*)buf;
-	sp->s_free_inodes_count++;
-	put_block(dev, 1, buf);
-	get_block(dev, 2, buf);
-	gp = (GD*)buf;
-	gp->bg_free_inodes_count++;
-	put_block(dev, 2, buf);
-}
-
-void decFreeInodes(int dev)
-{
-	char buf[BLKSIZE];
-	get_block(dev, 1, buf);
-	sp = (SUPER*)buf;
-	sp->s_free_inodes_count--;
-	put_block(dev, 1, buf); 
-	get_block(dev, 2, buf);
-	gp = (GD*)buf;
-	gp->bg_free_inodes_count--;
-	put_block(dev, 2, buf);
-}
-
 // These 2 functions are needed for pwd()
 int findmyname(MINODE *parent, u32 myino, char myname[ ]) 
 {
@@ -295,171 +254,29 @@ int findino(MINODE *mip, u32 *myino) // myino = i# of . return i# of ..
 
 }
 
-
-enter_name(MINODE *pmip, int oino, char* child) {
-   printf("Currently inside enter_name...\n");
-   printf("oino = %d\n", oino);
-   char *cp;
-    char buf[1024];
-    int i = 0;
-    printf("Variables Defined!\n");
-   //(1). Get parent’s data block into a buf[ ];
-   printf("Creating Inode Pointer...\n");
-   INODE *ip;
-   ip = &(pmip->INODE);
-   get_block(dev, ip->i_block[0], buf);
-    if (ip->i_block[i]==0) {
-        printf("Error, No Memory in Data Block\n");
-        //Allocate a new data block; increment parent size by BLKSIZE;
-        //Enter new entry as the first entry in the new data block with rec_len¼BLKSIZE.
-    }
-    else{
-        //(2). In a data block of the parent directory, each dir_entry has an ideal length
-        printf("Reading Parent Inode...\n");
-        get_block(pmip->dev, pmip->INODE.i_block[i], buf);
-        dp = (DIR *)buf;
-        cp = buf;
-        printf("Traversing Block Until Last Entry...\n");
-        while (cp + dp->rec_len < buf + BLKSIZE){
-            cp += dp->rec_len;
-            dp = (DIR *)cp;
-        }
-        // dp NOW points at last entry in block
-
-        int ideal_length = 4*( (11 + dp->name_len)/4 );
-        int remain = dp->rec_len - ideal_length;
-        int need_length = 4*( (11 + strlen(child))/4 );
-        printf("ideal length = %d\nremain = %d\nneed length = %d\ndp->rec_len = %d\nstrlen(child) = %d\noino = %d\n",ideal_length, remain, need_length, dp->rec_len, strlen(child), oino);
-        if (remain >= need_length){
-            printf("Creating New Entry...\n");
-            printf("Trimming Last Entry...\n");
-            dp->rec_len = ideal_length;
-            printf("Moving to New Last Entry...\n");
-            cp += dp->rec_len;
-            dp = (DIR *)cp;
-            printf("Writing New Entry...\n");
-            printf("rec_len = %d, needlen = %d\n", dp->rec_len, need_length);
-            dp->inode = oino;
-            dp->rec_len = remain;
-            dp->name_len = strlen(child);
-            strncpy(dp->name, child, dp->name_len);
-            printf("rec_len = %d, needlen = %d\n", dp->rec_len, need_length);
-            //enter the new entry as the LAST entry and 
-            //trim the previous entry rec_len to its ideal_length;
-        }
-    }
-    //Write data block to disk;
-    put_block(pmip->dev, pmip->INODE.i_block[i], buf);
-}
-
-int ialloc(int dev) 
+void new_directory(int ino, int bnum, int dev) // step 5.3 in kmkdir
 {
-	int  i;
-	char buf[BLKSIZE];
+   char temp_buf[1024] = {0};
+   char *cp = temp_buf;
+   DIR *dp = (DIR *)temp_buf;
 
-	// read imap block
-	get_block(dev, imap, buf);
+   dp->inode = ino;
+   dp->name_len = 1;
+   dp->rec_len = 12;
+   strncpy(dp->name, ".", 1);
 
-	for (i = 0; i < ninodes; i++) {
-		if (tst_bit(buf, i) == 0) {
-			set_bit(buf, i);
-			decFreeInodes(dev); // update free inode count in SUPER and GD
-			put_block(dev, imap, buf);
-			return i + 1;
-		}
-	}
-	return 0;
+   cp += dp->rec_len;
+   dp = (DIR *)cp;
+
+   dp->inode = dev;
+   dp->name_len = 2;
+   dp->rec_len = 1024 - 12;
+   strncpy(dp->name, "..", 2);
+
+   put_block(dev, bnum, temp_buf);
 }
 
-int idalloc(int dev, int ino)  // deallocate an ino number
+int ideal_len(int n)
 {
-	char buf[BLKSIZE];
-
-	if (ino > ninodes) {
-		printf("inumber %d out of range\n", ino);
-		return 0;
-	}
-
-	// get inode bitmap block
-	get_block(dev, imap, buf);
-	buf[(ino-1) / 8] &= ~(1 << ((ino-1) % 8));
-
-	// write buf back
-	put_block(dev, imap, buf);
-
-	// update free inode count in SUPER and GD
-	incFreeInodes(dev);
-}
-
-int bdalloc(int dev, int blk) {
-   char buf[BLKSIZE];
-
-	// get block bitmap block
-	get_block(dev, bmap, buf);
-   buf[(blk - 1) / 8] &= ~(1 << ((blk - 1) % 8));
-
-	// write buf back
-	put_block(dev, bmap, buf);
-
-	// update free inode count in SUPER and GD
-	incFreeInodes(dev);
-}
-
-void rm_child(MINODE *pmip, char *name) {
-   int i = 0;
-   char buf[BLKSIZE], temp[256];
-   char *cp;
-   DIR *dp;
-   DIR *prev;
-
-   printf("searching for ino...\n");
-   int ino = search(pmip, name);
-   printf("getting block pmip = %d, pmip->INODE.i_block[i] = %d...\n", pmip->dev, pmip->INODE.i_block[i]);
-   get_block(pmip->dev, pmip->INODE.i_block[i], buf);
-   dp = (DIR *)buf;
-   cp = buf;
-
-   // Count Entries
-   int entry_count = 1;
-   while (cp + dp->rec_len < buf + BLKSIZE){
-      cp += dp->rec_len;
-      dp = (DIR *)cp;
-      entry_count++;
-   }
-   dp = (DIR *)buf;
-   prev = (DIR *)buf;
-   cp = buf;
-   if (entry_count == 3) { // The node to be deleted is the first and only entry
-      printf("1...\n");
-      bdalloc(pmip->dev, pmip->INODE.i_block[i]);
-      return;
-   }
-   strncpy(temp, dp->name, dp->name_len);
-   temp[dp->name_len] = 0;
-   while (strcmp(name, temp) != 0){
-      prev = (DIR *)cp;
-      cp += dp->rec_len;
-      dp = (DIR *)cp;
-      entry_count--;
-      printf("entry_count = %d\n", entry_count);
-      strncpy(temp, dp->name, dp->name_len);
-      temp[dp->name_len] = 0;
-   }
-
-   if (entry_count == 1) { // The node to be deleted is the the last entry
-      printf("2...\n");
-      prev->rec_len += dp->rec_len; // Adds space from deleted node to the node just before itself.
-      put_block(pmip->dev, pmip->INODE.i_block[i], buf);
-      return;
-   }
-   else { // The node to be deleted is the first or the middle node of many
-      printf("3...\n");
-      int size = buf + BLKSIZE - (cp + dp->rec_len);
-      int space = dp->rec_len;
-      cp -= dp->rec_len;
-      dp = (DIR *)cp;
-		dp->rec_len += space;
-		memcpy(cp, (cp + space), size);
-      return;
-   }
+   return 4 * ((8 + n + 3) / 4);
 }
