@@ -39,6 +39,8 @@ typedef struct proc{
   int          uid;      // user ID
   int          gid;
   MINODE      *cwd;      // CWD directory pointer  
+
+  OFT *fd[NFDBITS];
 }PROC;
 
 typedef struct mtable{
@@ -54,5 +56,13 @@ typedef struct mtable{
   char devName[64]; //device name
   char mntName[64]; // mount point DIR name
 }MTABLE;
+
+typedef struct oft{ //OpenFileTable
+  int mode; //R | W | RW | APP
+  int refCount;
+  MINODE *minodePtr;
+  int offset;
+}OFT;
+OFT oft[64];
 
 #endif
