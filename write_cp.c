@@ -27,8 +27,11 @@ int mywrite(int fd, char buf[ ], int nbytes)
     int startByte;
     int offset, remain;
 
-    MINODE *ip;
-    MINODE *mip;
+
+    OFT *oftp = running->fd[fd];
+
+    MINODE *mip = oftp->minodePtr;
+    INODE *ip = &mip;
 
     char ibuf[BLKSIZE], wbuf[BLKSIZE];
 
@@ -38,21 +41,21 @@ int mywrite(int fd, char buf[ ], int nbytes)
 
         //compute LOGICAL BLOCK (lbk) and the startByte in that lbk:
 
-        //lbk       = oftp->offset / BLKSIZE;
-        //startByte = oftp->offset % BLKSIZE;
+        lbk       = oftp->offset / BLKSIZE;
+        startByte = oftp->offset % BLKSIZE;
 
         // I only show how to write DIRECT data blocks, you figure out how to 
         // write indirect and double-indirect blocks.
 
         if (lbk < 12){                         // direct block
-            if (ip->INODE.i_block[lbk] == 0){   // if no data block yet
+            if (ip->i_block[lbk] == 0){   // if no data block yet
                 mip->INODE.i_block[lbk] = balloc(mip->dev);// MUST ALLOCATE a block
             }
             blk = mip->INODE.i_block[lbk];      // blk should be a disk block now
         }
         else if (lbk >= 12 && lbk < 256 + 12){ // INDIRECT blocks 
               // HELP INFO:
-              if (ip->INODE.i_block[12] == 0){
+              if (ip->i_block[12] == 0){
                   //allocate a block for it;
                   //zero out the block on disk !!!!
               }

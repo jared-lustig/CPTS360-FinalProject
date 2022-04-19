@@ -80,11 +80,11 @@ int power(int base, int exp);
 //Read_cat.c
 
 //Reads a file
-int read_file();
+int read_file(int fd, char *buf, int nbytes);
 //myread - helper function for read_file
 int myread(int fd, char buf[ ], int nbytes);
 //mycat - displays content of file to terminal
-int mycat();
+int mycat(char *pathname);
 
 //Write_cp.c
 

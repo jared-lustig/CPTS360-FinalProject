@@ -33,6 +33,15 @@ typedef struct minode{
   struct mntable *mptr;  // for level-3
 }MINODE;
 
+typedef struct oft{ //OpenFileTable
+  int mode; //R | W | RW | APP
+  int refCount;
+  MINODE *minodePtr;
+  int offset;
+}OFT;
+
+OFT oft[64];
+
 typedef struct proc{
   struct proc *next;
   int          pid;      // process ID  
@@ -57,12 +66,6 @@ typedef struct mtable{
   char mntName[64]; // mount point DIR name
 }MTABLE;
 
-typedef struct oft{ //OpenFileTable
-  int mode; //R | W | RW | APP
-  int refCount;
-  MINODE *minodePtr;
-  int offset;
-}OFT;
-OFT oft[64];
+
 
 #endif
