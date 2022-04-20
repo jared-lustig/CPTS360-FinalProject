@@ -20,7 +20,7 @@ int read_file(int fd, char *buf, int nbytes)
     //If fd is empty, set the buffer to 0 and retun 0
     if (fd == 1 || fd == 3)
     {
-        printf("Field is not open for RD or RW\n");
+        printf("File is not open for RD or RW\n");
         return 0;
     }
 
@@ -36,7 +36,7 @@ int myread(int fd, char *buf, int nbytes)
     int count = 0;
     int lbk, blk;
     int startByte, remain;
-    printf("oftp->minodePTR->INODE.i_size = %d\n", oftp->minodePtr->INODE.i_size);
+    //printf("oftp->minodePTR->INODE.i_size = %d\n", oftp->minodePtr->INODE.i_size);
     //int offset = oft->offset;    
     //avil = fileSize - OFT's offset // number of bytes still available in file.
     int avil = oftp->minodePtr->INODE.i_size - oftp->offset; // Where do I get filesize and OFT offset
@@ -66,7 +66,7 @@ int myread(int fd, char *buf, int nbytes)
             get_block(oftp->minodePtr->dev, oftp->minodePtr->INODE.i_block[12], (char *)ibuf);
             printf("lbk = %d IDblk = %d blk = %d\n", lbk, oftp->minodePtr->INODE.i_block[12], blk);
 
-            getchar();
+            //getchar();
        }
        else{ 
             //  double indirect blocks

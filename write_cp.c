@@ -9,16 +9,21 @@
 
 #include "functions.h"
 
-int write_file()
+int write_file(int gd, char* buf, int nbytes)
 {
-//   1. Preprations:
-//      ask for a fd   and   a text string to write;
+    //   1. Preprations:
+    //      ask for a fd   and   a text string to write;
 
-//   2. verify fd is indeed opened for WR or RW or APPEND mode
+    //?
 
-//   3. copy the text string into a buf[] and get its length as nbytes.
+    //   2. verify fd is indeed opened for WR or RW or APPEND mode
+    if (gd != 1 || gd != 3)
+    {
+        printf("File is not open for RW or WR\n");
+    }
+    //   3. copy the text string into a buf[] and get its length as nbytes.
 
-//      return(mywrite(fd, buf, nbytes));
+    return(mywrite(gd, buf, nbytes));
 }
 
 int mywrite(int fd, char buf[ ], int nbytes) 
@@ -94,19 +99,39 @@ int mywrite(int fd, char buf[ ], int nbytes)
   return nbytes;
 }
 
-int mycp()
+int mycp(char* pathname, char* destination)
 {
-// cp src dest:
+    // cp src dest:
+    char dirname[64], base[64];
+    int i;
+    for(i = strlen(pathname); pathname[i] != '/' && i != 0; i--);
+    if(i == 0) // if you are making directory within root directory
+    {
+        strcpy(base, pathname);
+        strcpy(dirname, "/");
+    }
+    else // if new directory has path included
+    {
+        strcpy(base, &pathname[i+1]);
+        strncpy(dirname, pathname, i+1);
+    }
+    
+    printf("dirname = %s, base = %s\n", dirname, base);
 
-// 1. fd = open src for READ;
+    char* buf[BLKSIZE];
+    int n;
 
-// 2. gd = open dst for WR|CREAT; 
+    // 1. fd = open src for READ;
+    int fd = open(base, 0);
 
-//    NOTE:In the project, you may have to creat the dst file first, then open it 
-//         for WR, OR  if open fails due to no file yet, creat it and then open it
-//         for WR.
+    // 2. gd = open dst for WR|CREAT; 
+    int gd = open(destination,1);
 
-// 3. while( n=read(fd, buf[ ], BLKSIZE) ){
-//        write(gd, buf, n);  // notice the n in write()
-//    }
+    //    NOTE:In the project, you may have to creat the dst file first, then open it 
+    //         for WR, OR  if open fails due to no file yet, creat it and then open it
+    //         for WR.
+
+    while( n = read(fd, buf, BLKSIZE) ){
+           write_file(gd, buf, n);  // notice the n in write()
+    }
 }
