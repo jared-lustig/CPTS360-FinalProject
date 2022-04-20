@@ -32,6 +32,7 @@ int   n;         // number of component strings
 int fd, dev;
 int nblocks, ninodes, bmap, imap, iblk;
 char line[128], cmd[32], pathname[128], third[128];
+OFT init_oft[10];
 
 // #include "cd_ls_pwd.c"
 // #include "alloc.c"
@@ -54,11 +55,16 @@ int init()
     mip->mptr = 0;
   }
   for (i=0; i<NPROC; i++){
+    for (j = 0; j < NFD; j++) {
+      proc[i].fd[j] = 0;
+      proc[i].next = &proc[i+1];
+    }
     p = &proc[i];
     p->pid = i;
     p->uid = p->gid = 0;
     p->cwd = 0;
   }
+  
 }
 
 // load root INODE and set root pointer to it
@@ -113,7 +119,6 @@ int main(int argc, char *argv[ ])
   printf("root refCount = %d\n", root->refCount);
 
   // WRTIE code here to create P1 as a USER process
-  
   while(1){
     printf("input command : [ls|cd|pwd|mkdir|creat|rmdir|link|unlink|symlink|readlink|chmod|utime|stat|quit] ");
     fgets(line, 128, stdin);
@@ -122,6 +127,7 @@ int main(int argc, char *argv[ ])
     if (line[0]==0)
        continue;
     pathname[0] = 0;
+    third[0] = 0;
 
     sscanf(line, "%s %s %s", cmd, pathname, third);
     printf("cmd=%s pathname=%s\n", cmd, pathname);
@@ -160,8 +166,17 @@ int main(int argc, char *argv[ ])
       my_chmod(pathname, third);
     else if (strcmp(cmd, "stat") == 0)
       my_stat();
+    else if (strcmp(cmd, "open")==0) {
+      int open_int = atoi(third); 
+      open_file(pathname, open_int);
+    }
+    else if (strcmp(cmd, "close")==0) {
+      int close_int = atoi(pathname); 
+      close(close_int);
+    }
     else if (strcmp(cmd, "quit")==0)
        quit();
+
   }
 }
 

@@ -242,30 +242,23 @@ int kcreat(MINODE *pmip, char *base, int pino)
 }
 
 enter_name(MINODE *pmip, int oino, char* child) {
-   printf("Currently inside enter_name...\n");
-   printf("oino = %d\n", oino);
    char *cp;
     char buf[1024];
     int i = 0;
-    printf("Variables Defined!\n");
    //(1). Get parent’s data block into a buf[ ];
-   printf("Creating Inode Pointer...\n");
    INODE *ip;
    ip = &(pmip->INODE);
    get_block(dev, ip->i_block[0], buf);
     if (ip->i_block[i]==0) {
-        printf("Error, No Memory in Data Block\n");
         //Allocate a new data block; increment parent size by BLKSIZE;
         //Enter new entry as the first entry in the new data block with rec_len¼BLKSIZE.
         return;
     }
     else{
         //(2). In a data block of the parent directory, each dir_entry has an ideal length
-        printf("Reading Parent Inode...\n");
         get_block(pmip->dev, pmip->INODE.i_block[i], buf);
         dp = (DIR *)buf;
         cp = buf;
-        printf("Traversing Block Until Last Entry...\n");
         while (cp + dp->rec_len < buf + BLKSIZE){
             cp += dp->rec_len;
             dp = (DIR *)cp;
@@ -275,21 +268,14 @@ enter_name(MINODE *pmip, int oino, char* child) {
         int ideal_length = 4*( (11 + dp->name_len)/4 );
         int remain = dp->rec_len - ideal_length;
         int need_length = 4*( (11 + strlen(child))/4 );
-        printf("ideal length = %d\nremain = %d\nneed length = %d\ndp->rec_len = %d\nstrlen(child) = %d\noino = %d\n",ideal_length, remain, need_length, dp->rec_len, strlen(child), oino);
         if (remain >= need_length){
-            printf("Creating New Entry...\n");
-            printf("Trimming Last Entry...\n");
             dp->rec_len = ideal_length;
-            printf("Moving to New Last Entry...\n");
             cp += dp->rec_len;
             dp = (DIR *)cp;
-            printf("Writing New Entry...\n");
-            printf("rec_len = %d, needlen = %d\n", dp->rec_len, need_length);
             dp->inode = oino;
             dp->rec_len = remain;
             dp->name_len = strlen(child);
             strncpy(dp->name, child, dp->name_len);
-            printf("rec_len = %d, needlen = %d\n", dp->rec_len, need_length);
             //enter the new entry as the LAST entry and 
             //trim the previous entry rec_len to its ideal_length;
             put_block(pmip->dev, pmip->INODE.i_block[i], buf);

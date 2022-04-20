@@ -75,11 +75,8 @@ int my_unlink() {
     }
     char* parent = dirname(pathname); 
     char* child = basename(pathname);
-    printf("getting parent pino\n");
     int pino = getino(parent);
-    printf("getting parent mino\n");
     pmip = iget(dev, pino);
-    printf("got parent mino!\n");
     rm_child(pmip, child);
     pmip->dirty = 1;
     iput(pmip);
