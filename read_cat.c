@@ -18,22 +18,10 @@ int read_file(int fd, char *buf, int nbytes)
 //     return(myread(fd, buf, nbytes));
     
     //If fd is empty, set the buffer to 0 and retun 0
-    if (running->fd[fd]->refCount <= 0)
+    if (fd == 1 || fd == 3)
     {
-        int i = 0;
-        for(i = 0; i < 1024; i++)
-        {
-            buf[i] = 0;
-        }
-        printf("File is not Open\n");
-        return 0;
-    }
-
-    // If mode is in W, then mode is 1 and return 0
-    if(running->fd[fd]->mode == 1)
-    {
-        printf("FIle is open of write\n");
-        return 0;
+        printf("Fild is not open for RD or RW\n");
+        return -1;
     }
 
     // Else we know its in read
@@ -48,9 +36,11 @@ int myread(int fd, char *buf, int nbytes)
     int count = 0;
     int lbk, blk;
     int startByte, remain;
+    printf("oftp->minodePTR->INODE.i_size = %d\n", oftp->minodePtr->INODE.i_size);
     //int offset = oft->offset;    
     //avil = fileSize - OFT's offset // number of bytes still available in file.
     int avil = oftp->minodePtr->INODE.i_size - oftp->offset; // Where do I get filesize and OFT offset
+    printf("-------------------\n");
 
     char readbuf[BLKSIZE];
     char *cq = buf;                // cq points at buf[ ]

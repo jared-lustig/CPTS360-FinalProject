@@ -54,11 +54,17 @@ int init()
     mip->mptr = 0;
   }
   for (i=0; i<NPROC; i++){
+    for (j = 0; j < NFD; j++)
+    {
+      proc[i].fd[j] = 0;
+      proc[i].next = &proc[i+1];
+    }
     p = &proc[i];
     p->pid = i;
     p->uid = p->gid = 0;
     p->cwd = 0;
   }
+  for (i = 0; i < NOFT)
 }
 
 // load root INODE and set root pointer to it
