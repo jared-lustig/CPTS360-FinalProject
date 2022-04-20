@@ -10,6 +10,10 @@ extern char pathname[128];
 extern MINODE *root;
 extern PROC proc[NPROC], *running; 
 
+//open_close_lseek.c
+int open_file(char* pathname, int mode);
+int close(int fd);
+
 //Link_Unlink.c
 
 int my_link();

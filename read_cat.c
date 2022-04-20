@@ -20,8 +20,8 @@ int read_file(int fd, char *buf, int nbytes)
     //If fd is empty, set the buffer to 0 and retun 0
     if (fd == 1 || fd == 3)
     {
-        printf("Fild is not open for RD or RW\n");
-        return -1;
+        printf("Field is not open for RD or RW\n");
+        return 0;
     }
 
     // Else we know its in read
@@ -40,7 +40,7 @@ int myread(int fd, char *buf, int nbytes)
     //int offset = oft->offset;    
     //avil = fileSize - OFT's offset // number of bytes still available in file.
     int avil = oftp->minodePtr->INODE.i_size - oftp->offset; // Where do I get filesize and OFT offset
-    printf("-------------------\n");
+    
 
     char readbuf[BLKSIZE];
     char *cq = buf;                // cq points at buf[ ]
@@ -54,6 +54,7 @@ int myread(int fd, char *buf, int nbytes)
       startByte = oftp->offset % BLKSIZE;
      
        // I only show how to read DIRECT BLOCKS. YOU do INDIRECT and D_INDIRECT
+       
  
        if (lbk < 12){                     // lbk is a direct block
            blk = oftp->minodePtr->INODE.i_block[lbk]; // map LOGICAL lbk to PHYSICAL blk
@@ -80,11 +81,11 @@ int myread(int fd, char *buf, int nbytes)
 
        /* get the data block into readbuf[BLKSIZE] */
        get_block(oftp->minodePtr->dev, blk, readbuf);
-
+       
        /* copy from startByte to buf[ ], at most remain bytes in this block */
        char *cp = readbuf + startByte;   
        remain = BLKSIZE - startByte;   // number of bytes remain in readbuf[]
-
+        
        while (remain > 0){
             *cq++ = *cp++;             // copy byte from readbuf[] into buf[]
              oftp->offset++;           // advance offset 
@@ -92,6 +93,8 @@ int myread(int fd, char *buf, int nbytes)
              avil--; nbytes--;  remain--;
              if (nbytes <= 0 || avil <= 0) 
                  break;
+        
+
        }
  
        // if one data block is not enough, loop back to OUTER while for more ...
@@ -124,18 +127,18 @@ int mycat(char *pathname)
     int n;
 
     //   1. 
-    int fd = open(base, 0); // currently returns -1, guessing it is reading from current directory rather than mkdisk, may need actual open for it to work.
+    int fd = open_file(base, 0); // currently returns -1, guessing it is reading from current directory rather than mkdisk, may need actual open for it to work.
 
     printf("fd = %d\n", fd);
     //int fd = myopen(base, "0");
     //   2. 
-    while( n = read_file(fd, mybuf[1024], 1024)){
+
+    while( n = read_file(fd, mybuf, BLKSIZE)){
        mybuf[n] = 0;             // as a null terminated string
        printf("%s", mybuf);   //<=== THIS works but not good
        //spit out chars from mybuf[ ] but handle \n properly;
     } 
 //   3. close(fd);
-
-    //myclose(fd);
+    close(fd);
     return 0;
 }
