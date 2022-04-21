@@ -40,7 +40,7 @@ int myread(int fd, char *buf, int nbytes)
     //int offset = oft->offset;    
     //avil = fileSize - OFT's offset // number of bytes still available in file.
     int avil = oftp->minodePtr->INODE.i_size - oftp->offset; // Where do I get filesize and OFT offset
-    
+    int *ip;
 
     char readbuf[BLKSIZE];
     char *cq = buf;                // cq points at buf[ ]
@@ -61,22 +61,21 @@ int myread(int fd, char *buf, int nbytes)
        }
        else if (lbk >= 12 && lbk < 256 + 12) { 
             //  indirect blocks
+            printf("read: indirect block\n");
             char ibuf[256];
             
             get_block(oftp->minodePtr->dev, oftp->minodePtr->INODE.i_block[12], (char *)ibuf);
             printf("lbk = %d IDblk = %d blk = %d\n", lbk, oftp->minodePtr->INODE.i_block[12], blk);
-
-            //getchar();
        }
        else{ 
+           printf("read: double indirect block\n");
             //  double indirect blocks
+            get_block(oftp->minodePtr->dev, oftp->minodePtr->INODE.i_block[13], readbuf);
 
-            lbk -= (12 + 256);
-
-            blk = (oftp->minodePtr->ino - 1) / BLKSIZE;
-            int offset = (oftp->minodePtr->ino - 1) % BLKSIZE;
-
-            printf("double indirect block not finished\n");
+            ip = (int *)readbuf + (lbk-256-12) / 256;
+            get_block(oftp->minodePtr->dev, *ip, readbuf);
+            ip = (int *)readbuf + (lbk-256-12) % 256;
+            blk = *ip;
         } 
 
        /* get the data block into readbuf[BLKSIZE] */

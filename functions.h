@@ -93,11 +93,11 @@ int mycat(char *pathname);
 //Write_cp.c
 
 //Writes to a file
-int write_file();
+int write_file(char* pathname);
 //mywrite - helper function for write_file
 int mywrite(int fd, char buf[ ], int nbytes);
 //mycp - ...
-int mycp();
+int mycp(char* pathname, char* destination);
 
 
 #endif
