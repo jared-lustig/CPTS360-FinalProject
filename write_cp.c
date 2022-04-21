@@ -33,7 +33,7 @@ int write_file(char* pathname)
 
     int fd;
     char wbuf[BLKSIZE];
-    fd = atoi(base);
+    fd = getino(pathname);
 
     //   2. verify fd is indeed opened for WR or RW or APPEND mode
     if (fd != 1 || fd != 3)
@@ -43,10 +43,9 @@ int write_file(char* pathname)
     }
     //   3. copy the text string into a buf[] and get its length as nbytes.
 
-    fgets(wbuf, BLKSIZE, stdin);
     wbuf[strlen(wbuf) - 1] = 0;
 
-    return(mywrite(fd, wbuf, strlen(wbuf)));
+    return(mywrite(fd, wbuf, BLKSIZE));
 }
 
 int mywrite(int fd, char buf[ ], int nbytes) 
@@ -60,6 +59,8 @@ int mywrite(int fd, char buf[ ], int nbytes)
 
     MINODE *mip = oftp->minodePtr;
     INODE *ip = &mip;
+
+    int ib[BLKSIZE / sizeof(int)], id[BLKSIZE / sizeof(int)];
 
     char ibuf[BLKSIZE], wbuf[BLKSIZE], dbuf[BLKSIZE];
 
@@ -88,30 +89,35 @@ int mywrite(int fd, char buf[ ], int nbytes)
                   //allocate a block for it;
                   //zero out the block on disk !!!!
                   mip->INODE.i_block[12] = balloc(mip->dev);
-                  //memset(ibuf, 0, 256);
+                  get_block(mip->dev, mip->INODE.i_block[12], ibuf);
+                  memset(ibuf, 0, BLKSIZE);
+                  put_block(mip->dev, mip->INODE.i_block[12], ibuf);
               }
-              //get i_block[12] into an int ibuf[256];
-              blk = ibuf[lbk - 12];
+              memset(ib, 0, BLKSIZE / sizeof(int));
+              get_block(mip->dev, mip->INODE.i_block[12], (char *)ib);
+              //get i_block[12] into an int ibuf[BLKSIZE];
+              blk = ib[lbk - 12];
               if (blk==0){
                  //allocate a disk block;
                  //record it in i_block[12];
-                 mip->INODE.i_block[lbk] = balloc(mip->dev);
-                 ibuf[lbk - 12] = mip->INODE.i_block[lbk];
-
+                 blk = balloc(mip->dev);
+                 ib[lbk - 12] = blk;
+                 put_block(mip->dev, mip->INODE.i_block[12], (char *)ib);
               }
+              
               //.......
         }
         else{
             // double indirect blocks */
             printf("writing to double indirect block\n");
-            //memset(ibuf, 0,  256);
+            memset(ibuf, 0,  256);
             get_block(mip->dev, mip->INODE.i_block[13], (char *)dbuf);
             lbk -= (12 + 256);
             dblk = dbuf[lbk / 256];
             get_block(mip->dev, dblk, (char *)dbuf);
             blk = dbuf[lbk % 256];
         }
-
+     memset(wbuf, 0, BLKSIZE);
      /* all cases come to here : write to the data block */
      get_block(mip->dev, blk, wbuf);   // read disk block into wbuf[ ]  
      char *cp = wbuf + startByte;      // cp points at startByte in wbuf[]
@@ -131,7 +137,7 @@ int mywrite(int fd, char buf[ ], int nbytes)
   }
 
   mip->dirty = 1;       // mark mip dirty for iput() 
-  printf("wrote %d char into file descriptor fd=%d\n", nbytes, fd);           
+  printf("wrote %d char into file descriptor fd=%d\n", nbytes, fd);
   return nbytes;
 }
 
@@ -161,14 +167,15 @@ int mycp(char* pathname, char* destination)
     int fd = open_file(base, 0);
 
     // 2. gd = open dst for WR|CREAT; 
-    int gd = open_file(destination,2);
+    int gd = open_file(destination,1);
 
     //    NOTE:In the project, you may have to creat the dst file first, then open it 
     //         for WR, OR  if open fails due to no file yet, creat it and then open it
     //         for WR.
-
-    while( n = read(fd, buf, BLKSIZE) ){
+    memset(buf, 0, BLKSIZE);
+    while( n = read_file(fd, buf, BLKSIZE) ){;     
         mywrite(gd, buf, n);  // notice the n in write()
+        memset(buf, 0, BLKSIZE); // setting all index of array to a certain value
     }
 
     close(fd);

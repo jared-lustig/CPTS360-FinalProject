@@ -62,20 +62,21 @@ int myread(int fd, char *buf, int nbytes)
        else if (lbk >= 12 && lbk < 256 + 12) { 
             //  indirect blocks
             printf("read: indirect block\n");
-            char ibuf[256];
+            int ib[BLKSIZE];
             
-            get_block(oftp->minodePtr->dev, oftp->minodePtr->INODE.i_block[12], (char *)ibuf);
+            get_block(oftp->minodePtr->dev, oftp->minodePtr->INODE.i_block[12], (char *)ib);
             printf("lbk = %d IDblk = %d blk = %d\n", lbk, oftp->minodePtr->INODE.i_block[12], blk);
        }
        else{ 
+           int idd[BLKSIZE];
            printf("read: double indirect block\n");
             //  double indirect blocks
-            get_block(oftp->minodePtr->dev, oftp->minodePtr->INODE.i_block[13], readbuf);
+            get_block(oftp->minodePtr->dev, oftp->minodePtr->INODE.i_block[13], (char *)idd);
 
             ip = (int *)readbuf + (lbk-256-12) / 256;
-            get_block(oftp->minodePtr->dev, *ip, readbuf);
+            get_block(oftp->minodePtr->dev, *ip, (char *)idd);
             ip = (int *)readbuf + (lbk-256-12) % 256;
-            blk = *ip;
+            //blk = *ip;
         } 
 
        /* get the data block into readbuf[BLKSIZE] */
