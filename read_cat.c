@@ -62,9 +62,11 @@ int myread(int fd, char *buf, int nbytes)
        else if (lbk >= 12 && lbk < 256 + 12) { 
             //  indirect blocks
             printf("read: indirect block\n");
-            int ib[BLKSIZE];
+            int ib[256];
             
             get_block(oftp->minodePtr->dev, oftp->minodePtr->INODE.i_block[12], (char *)ib);
+            int ibno = ib[lbk - 12];
+            blk = ibno;
             printf("lbk = %d IDblk = %d blk = %d\n", lbk, oftp->minodePtr->INODE.i_block[12], blk);
        }
        else{ 
@@ -76,7 +78,7 @@ int myread(int fd, char *buf, int nbytes)
             ip = (int *)readbuf + (lbk-256-12) / 256;
             get_block(oftp->minodePtr->dev, *ip, (char *)idd);
             ip = (int *)readbuf + (lbk-256-12) % 256;
-            //blk = *ip;
+            //blk = *ip; 
         } 
 
        /* get the data block into readbuf[BLKSIZE] */
@@ -92,15 +94,16 @@ int myread(int fd, char *buf, int nbytes)
              count++;                  // inc count as number of bytes read
              avil--; nbytes--;  remain--;
              if (nbytes <= 0 || avil <= 0) 
-                 break;
-        
+                 break;  
 
        }
  
        // if one data block is not enough, loop back to OUTER while for more ...
 
     }
-   printf("myread: read %d char from file descriptor %d\n", count, fd);  
+//    printf("\n<><><><><><><><><><><><><><><><><><><><><><><><><><><>\n");
+//    printf("\nmyread: read %d char from file descriptor %d\n", count, fd);  
+//    printf("\n<><><><><><><><><><><><><><><><><><><><><><><><><><><>\n");
    return count;   // count is the actual number of bytes read
 }
 
@@ -123,7 +126,7 @@ int mycat(char *pathname)
     
     printf("dirname = %s, base = %s\n", dirname, base);
 
-    char mybuf[1024], dummy = 0;  // a null char at end of mybuf[ ]
+    char mybuf[BLKSIZE], dummy = 0;  // a null char at end of mybuf[ ]
     int n;
 
     //   1. 
@@ -136,6 +139,7 @@ int mycat(char *pathname)
     while( n = read_file(fd, mybuf, BLKSIZE)){
        mybuf[n] = 0;             // as a null terminated string
        printf("%s", mybuf);   //<=== THIS works but not good
+       memset(mybuf, 0, BLKSIZE);
        //spit out chars from mybuf[ ] but handle \n properly;
     } 
 //   3. close(fd);

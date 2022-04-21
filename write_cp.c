@@ -53,6 +53,7 @@ int mywrite(int fd, char buf[ ], int nbytes)
     int lbk, blk, dblk;
     int startByte;
     int offset, remain;
+   // int count = 0;
 
 
     OFT *oftp = running->fd[fd];
@@ -62,15 +63,18 @@ int mywrite(int fd, char buf[ ], int nbytes)
 
     int ib[BLKSIZE / sizeof(int)], id[BLKSIZE / sizeof(int)];
 
+    int buf13[256]; // buf13[] = |D0|D1|D2|...|
+
     char ibuf[BLKSIZE], wbuf[BLKSIZE], dbuf[BLKSIZE];
 
     char *cp = buf, *cq = buf;
 
     while (nbytes > 0 ){
-
+        bzero(wbuf, BLKSIZE);
         //compute LOGICAL BLOCK (lbk) and the startByte in that lbk:
 
         lbk       = oftp->offset / BLKSIZE;
+        printf("\n\nlbk = %d\n\n", lbk);
         startByte = oftp->offset % BLKSIZE;
 
         // I only show how to write DIRECT data blocks, you figure out how to 
@@ -79,8 +83,12 @@ int mywrite(int fd, char buf[ ], int nbytes)
         if (lbk < 12){                         // direct block
             if (ip->i_block[lbk] == 0){   // if no data block yet
                 mip->INODE.i_block[lbk] = balloc(mip->dev);// MUST ALLOCATE a block
+                get_block(mip->dev, mip->INODE.i_block[lbk], wbuf);
+                memset(wbuf, 0, BLKSIZE);
+                put_block(mip->dev, mip->INODE.i_block[lbk], wbuf);
             }
             blk = mip->INODE.i_block[lbk];      // blk should be a disk block now
+            printf("\nblk inside direct block = %d\n", blk);
         }
         else if (lbk >= 12 && lbk < 256 + 12){ // INDIRECT blocks 
               // HELP INFO:
@@ -101,9 +109,13 @@ int mywrite(int fd, char buf[ ], int nbytes)
                  //allocate a disk block;
                  //record it in i_block[12];
                  blk = balloc(mip->dev);
+                 get_block(mip->dev, blk, wbuf);
+                 bzero(wbuf, BLKSIZE);
+                 put_block(mip->dev, blk, wbuf);
                  ib[lbk - 12] = blk;
                  put_block(mip->dev, mip->INODE.i_block[12], (char *)ib);
               }
+              printf("\nblk inside indirect direct block = %d\n", blk);
               
               //.......
         }
@@ -113,7 +125,7 @@ int mywrite(int fd, char buf[ ], int nbytes)
             memset(ibuf, 0,  256);
             get_block(mip->dev, mip->INODE.i_block[13], (char *)dbuf);
             lbk -= (12 + 256);
-            dblk = dbuf[lbk / 256];
+            dblk = dbuf[lbk / 256]; 
             get_block(mip->dev, dblk, (char *)dbuf);
             blk = dbuf[lbk % 256];
         }
@@ -123,8 +135,11 @@ int mywrite(int fd, char buf[ ], int nbytes)
      char *cp = wbuf + startByte;      // cp points at startByte in wbuf[]
      remain = BLKSIZE - startByte;     // number of BYTEs remain in this block
 
+    //make sure remain / startbyte is set correctly.
+
      while (remain > 0){               // write as much as remain allows  
            *cp++ = *cq++;              // cq points at buf[ ]
+           //count ++;
            nbytes--; remain--;         // dec counts
            oftp->offset++;             // advance offset
            if (offset > mip->INODE.i_size)  // especially for RW|APPEND mode
@@ -174,6 +189,7 @@ int mycp(char* pathname, char* destination)
     //         for WR.
     memset(buf, 0, BLKSIZE);
     while( n = read_file(fd, buf, BLKSIZE) ){;     
+        printf("my write buf = %s", buf); // buffer might be messed up 
         mywrite(gd, buf, n);  // notice the n in write()
         memset(buf, 0, BLKSIZE); // setting all index of array to a certain value
     }

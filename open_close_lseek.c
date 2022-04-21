@@ -11,7 +11,7 @@
 
 extern MINODE *iget();
 extern PROC *running; 
-extern OFT init_oft[10];
+extern OFT init_oft[64];
 
 
 int open_file(char* pathname, int mode)
@@ -52,7 +52,7 @@ int open_file(char* pathname, int mode)
     }
 
   //4. allocate a FREE OpenFileTable (OFT) and fill in values:
-    for (i = 0; i < 10; i++) {
+    for (i = 0; i < NOFT; i++) {
         if (running->fd[i] == NULL) {
             init_oft[i];
             init_oft[i].mode = 1;      // mode = 0|1|2|3 for R|W|RW|APPEND 
