@@ -96,10 +96,6 @@ int kmkdir(MINODE *pmip, char *base, int pino)
     MINODE *mip = iget(dev,ino); // load INODE into an minode;
 
     //5-2. initialize mip->INODE as a DIR INODE;
-    //pmip->INODE.i_block[0] = bno; //other i_block[ ] are 0;
-    //pmip->dirty = 1; //marking as dirty
-    //iput(pmip); // write INODE back to disk
-
 	/*Set all of the MINODE and INOE properties*/
 	//drwxr-xr-x
 	mip->INODE.i_mode 	  = 0x41ED; 
@@ -222,7 +218,7 @@ int kcreat(MINODE *pmip, char *base, int pino)
     MINODE *mip = iget(dev,ino); // load INODE into an minode;
 
 	/*Set all of the MINODE and INOE properties*/
-	//
+	//-r--rw--rw---
 	mip->INODE.i_mode 	  = 0x81A4; 
 	printf("i_mode set to %x\n", mip->INODE.i_mode);
 	mip->INODE.i_uid    	  = running->uid;
@@ -241,15 +237,17 @@ int kcreat(MINODE *pmip, char *base, int pino)
     return 0;
 }
 
+/* Enter Name 
+INPUT: MINODE, ino, new entry name 
+Description: Takes parent INODE, gets block, traverses to the last entry in the block,
+sets the new ino = oino, name = child, and rec_len = to block - 12 as the remainging space in the block 
+gets set to the last entry. PutBlock back into memory to save block. */ 
 enter_name(MINODE *pmip, int oino, char* child) {
    printf("Currently inside enter_name...\n");
-   printf("oino = %d\n", oino);
    char *cp;
     char buf[1024];
-    int i = 0;
-    printf("Variables Defined!\n");
+    int i = 0;;
    //(1). Get parent’s data block into a buf[ ];
-   printf("Creating Inode Pointer...\n");
    INODE *ip;
    ip = &(pmip->INODE);
    get_block(dev, ip->i_block[0], buf);
@@ -277,13 +275,9 @@ enter_name(MINODE *pmip, int oino, char* child) {
         int need_length = 4*( (11 + strlen(child))/4 );
         printf("ideal length = %d\nremain = %d\nneed length = %d\ndp->rec_len = %d\nstrlen(child) = %d\noino = %d\n",ideal_length, remain, need_length, dp->rec_len, strlen(child), oino);
         if (remain >= need_length){
-            printf("Creating New Entry...\n");
-            printf("Trimming Last Entry...\n");
             dp->rec_len = ideal_length;
-            printf("Moving to New Last Entry...\n");
             cp += dp->rec_len;
             dp = (DIR *)cp;
-            printf("Writing New Entry...\n");
             printf("rec_len = %d, needlen = %d\n", dp->rec_len, need_length);
             dp->inode = oino;
             dp->rec_len = remain;

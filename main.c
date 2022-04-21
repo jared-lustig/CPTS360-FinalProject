@@ -32,6 +32,7 @@ int   n;         // number of component strings
 int fd, dev;
 int nblocks, ninodes, bmap, imap, iblk;
 char line[128], cmd[32], pathname[128], third[128];
+OFT init_oft[10];
 
 // #include "cd_ls_pwd.c"
 // #include "alloc.c"
@@ -54,10 +55,19 @@ int init()
     mip->mptr = 0;
   }
   for (i=0; i<NPROC; i++){
+    for (j = 0; j < NFD; j++)
+    {
+      proc[i].fd[j] = 0;
+      proc[i].next = &proc[i+1];
+    }
     p = &proc[i];
     p->pid = i;
     p->uid = p->gid = 0;
     p->cwd = 0;
+  }
+  for (i = 0; i < NOFT; i++)
+  {
+    oft[i].refCount = 0;
   }
 }
 
@@ -68,7 +78,7 @@ int mount_root()
   root = iget(dev, 2);
 }
 
-char *disk = "diskimage";
+char *disk = "disk2";
 int main(int argc, char *argv[ ])
 {
   int ino;
@@ -103,6 +113,8 @@ int main(int argc, char *argv[ ])
   iblk = gp->bg_inode_table;
   printf("bmp=%d imap=%d inode_start = %d\n", bmap, imap, iblk);
 
+  printf("number of blocks = %d\n", nblocks);
+
   init();  
   mount_root();
   printf("root refCount = %d\n", root->refCount);
@@ -115,13 +127,14 @@ int main(int argc, char *argv[ ])
   // WRTIE code here to create P1 as a USER process
   
   while(1){
-    printf("input command : [ls|cd|pwd|mkdir|creat|rmdir|link|unlink|symlink|readlink|chmod|utime|stat|quit] ");
+    printf("input command : [ls|cd|pwd|mkdir|creat|rmdir|link|unlink|symlink|readlink|chmod|utime|stat|\nread|cat|quit] ");
     fgets(line, 128, stdin);
     line[strlen(line)-1] = 0;
 
     if (line[0]==0)
        continue;
     pathname[0] = 0;
+    third[0] = 0;
 
     sscanf(line, "%s %s %s", cmd, pathname, third);
     printf("cmd=%s pathname=%s\n", cmd, pathname);
@@ -160,6 +173,20 @@ int main(int argc, char *argv[ ])
       my_chmod(pathname, third);
     else if (strcmp(cmd, "stat") == 0)
       my_stat();
+    else if (strcmp(cmd, "open")==0) {
+      int open_int = atoi(third); 
+      open_file(pathname, open_int);
+    }
+    else if (strcmp(cmd, "close")==0) {
+      int close_int = atoi(pathname); 
+      close(close_int);
+    }
+    else if (strcmp(cmd, "read") == 0)
+      myread(fd, buf, n);
+    else if(strcmp(cmd, "cat") == 0)
+      mycat(pathname);
+    else if(strcmp(cmd, "cp") == 0)
+      mycp(pathname, third);
     else if (strcmp(cmd, "quit")==0)
        quit();
   }

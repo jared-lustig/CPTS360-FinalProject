@@ -12,6 +12,7 @@
 extern int imap;
 extern int ninodes;
 extern int bmap;
+extern int nblocks;
 
 extern MINODE *iget();
 
@@ -88,8 +89,10 @@ int balloc(int dev)  // allocate an inode number from inode_bitmap
 
   // read inode_bitmap block
   get_block(dev, bmap, buf);
+  
+	printf("number of blocks = %d\n\n", nblocks);
 
-  for (i=0; i < ninodes; i++){ // use ninodes from SUPER block
+  for (i=0; i < nblocks; i++){ // use ninodes from SUPER block
     if (tst_bit(buf, i)==0){
 
         set_bit(buf, i);

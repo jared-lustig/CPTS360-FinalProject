@@ -28,14 +28,6 @@ int my_rmdir(char *pathname)
       return -1;
    } 
 
-   //If not busy?
-   // if(mip->refCount > 1)
-   // {
-   //    printf("refCount is busy\n");
-   //    iput(mip);
-   //    return -1;
-   // }
-
    mip->refCount = 1;
 
    //Dir is empty
@@ -72,6 +64,14 @@ int my_rmdir(char *pathname)
    iput(mip);
 }
 
+/* Remove Child
+INPUT: MINODE, name 
+DESCRIPTION: get's block, then with a new buffer, sets the dp to traverse through the block
+If the currently block name is not 0.
+First IF statement checks to see if entry is at the beginning of the block (will have the entry block as rec len)
+First IF currently does nothing as this use case is very unlikely as we would need to fill up a block first, as . and .. are usually first entry
+Second IF statement checks to see if entry is at the end of the block, will take the rec len (space) and add it to the previous entry
+Last IF statment checks for middle case, takes space and adds it to last entry using the while loop to again traverse through the block with lastdp variable name*/
 void rm_child(MINODE *pmip, char *name) {
    int i = 0;
    char buf[BLKSIZE], temp[256];
