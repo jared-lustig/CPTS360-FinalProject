@@ -197,3 +197,40 @@ int mycp(char* pathname, char* destination)
     close(fd);
     close(gd);
 }
+
+int my_mv(char* src, char* dest) {
+    //mv src dest:
+    printf("running mv...\n");
+    //1. verify src exists; get its INODE in ==> you already know its dev
+    int ino_src = getino(src); 
+    if (ino_src == 0){ // if file does not exist
+        printf("ERROR: Src does not exist.\n");
+        return -1;
+    }
+    MINODE *mip_src = iget(dev, ino_src);
+    //2. check wheter src is on the same dev as src
+    int ino_dest = getino(dest); 
+    if (ino_dest == 0){ // if file does not exist
+        printf("ERROR: Dest does not exist.\n");
+        return -1;
+    }
+    MINODE *mip_dest = iget(dev, ino_dest);
+
+    if (mip_src->dev == mip_dest->dev) {
+        //CASE 1: same dev:
+        //3. Hard link dst with src (i.e. same INODE number)
+        printf("Same device, hard linking...\n");
+        my_link(src, dest);
+        //4. unlink src (i.e. rm src name from its parent directory and reduce INODE's
+               //link count by 1).
+        printf("Unlinking src...\n");
+        my_unlink();
+        return 0;
+    }
+            //CASE 2: not the same dev:
+    //3. cp src to dst
+//my_cp(mip_src, mip_dest);
+    //4. unlink src
+    printf("Unlinking src...\n");
+    my_unlink();
+}

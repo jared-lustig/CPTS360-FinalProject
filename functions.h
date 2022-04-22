@@ -13,6 +13,7 @@ extern PROC proc[NPROC], *running;
 //open_close_lseek.c
 int open_file(char* pathname, int mode);
 int close(int fd);
+int my_lseek(int fd, int position);
 
 //Link_Unlink.c
 
@@ -99,5 +100,6 @@ int mywrite(int fd, char buf[ ], int nbytes);
 //mycp - ...
 int mycp(char* pathname, char* destination);
 
+int my_mv(char* src, char* dest);
 
 #endif

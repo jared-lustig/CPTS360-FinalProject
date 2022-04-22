@@ -187,6 +187,13 @@ int main(int argc, char *argv[ ])
       mycat(pathname);
     else if(strcmp(cmd, "cp") == 0)
       mycp(pathname, third);
+    else if(strcmp(cmd, "mv") == 0)
+      my_mv(pathname, third);
+    else if(strcmp(cmd, "seek") == 0) {
+      int mv_src = atoi(pathname);
+      int mv_dest = atoi(third);
+      my_lseek(mv_src, mv_dest);
+    }
     else if (strcmp(cmd, "quit")==0)
        quit();
   }

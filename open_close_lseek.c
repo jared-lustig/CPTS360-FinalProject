@@ -122,3 +122,21 @@ int close(int fd) {
     printf("new refCount = %d\n", running->fd[fd]->refCount);
     running->fd[fd] = 0; // clear PROC’s fd[fd] to 0
 }
+
+int my_lseek(int fd, int position)
+{
+    //From fd, find the OFT entry. 
+
+    //change OFT entry's offset to position but make sure NOT to over run either end
+    //of the file.
+    printf("in seeek....\n");
+    if (position > running->fd[fd]->minodePtr->INODE.i_size) {
+        return -1;
+    }
+    int originalPosition = running->fd[fd]->offset;
+    running->fd[fd]->offset = position;
+
+    //return originalPosition
+    printf("op = %d", originalPosition);
+    return originalPosition;
+}
