@@ -87,9 +87,11 @@ int ls_dir(MINODE *mip)
 
      int gid, uid;
      gid = getgid(); uid = geteuid();
-     char mtime[64];
+     char mtime[128];
      ctime_r((time_t *)&mip->INODE.i_mtime, mtime);
-     mtime[strlen(mtime) - 1] = 0;
+     if (mtime[strlen(mtime) - 1] == '\n') {
+        mtime[strlen(mtime) - 1] = 0;
+     }
 
      printf("%8u %8u %8u %s %8u %s \t[%d %2d]\n", mip->INODE.i_links_count, 
      mip->INODE.i_gid, mip->INODE.i_uid, mtime, mip->INODE.i_size, temp, mip->dev, mip->ino);
