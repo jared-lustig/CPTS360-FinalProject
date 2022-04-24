@@ -3,7 +3,7 @@
 sudo dd if=/dev/zero of=diskimage bs=1024 count=1440
 sudo mke2fs -b 1024 diskimage 1440
 
-sudo mount disk2 /mnt
+sudo mount mydisk /mnt
 
 (cd /mnt; ls -l)
 

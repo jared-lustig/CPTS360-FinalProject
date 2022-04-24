@@ -78,7 +78,7 @@ int mount_root()
   root = iget(dev, 2);
 }
 
-char *disk = "disk2";
+char *disk = "mydisk";
 int main(int argc, char *argv[ ])
 {
   int ino;
@@ -147,8 +147,6 @@ int main(int argc, char *argv[ ])
        pwd(running->cwd);
     else if (strcmp(cmd, "mkdir") == 0)
     {
-      if(pathname[0] == '\0')
-        pathname[0] = '/';
       my_mkdir(pathname);
     }
     else if (strcmp(cmd, "creat") == 0)

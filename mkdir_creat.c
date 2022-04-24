@@ -17,44 +17,17 @@ extern PROC *running;
 
 int my_mkdir(char *pathname)
 {
-    char *tester;
-    MINODE *mip = root;
-    // 1. if (pathname is absolute) dev = root->dev;
-    
-    dev = mip->dev;
-
-    /*2. divide pathname into dirname and basename;*/
-    char dirname[64], base[64];
+    MINODE *pmip;
+    int pino;
     int i;
-    for(i = strlen(pathname); pathname[i] != '/' && i != 0; i--);
-    if(i == 0) // if you are making directory within root directory
-    {
-        strcpy(base, pathname);
-        strcpy(dirname, "/");
-    }
-    else // if new directory has path included
-    {
-        strcpy(base, &pathname[i+1]);
-        strncpy(dirname, pathname, i+1);
-    }
-    
-    printf("dirname = %s, base = %s\n", dirname, base);
+    // get child name
+    tokenize(pathname);
+    char *child = name[n-1];
 
-    //3. // dirname must exist and is a DIR:
-    int pino = getino(dirname);
-    MINODE *pmip = iget(dev, pino);
-
-    if(*pathname != '/') // if pathname not root
-    {
-        pmip = running->cwd;    
-    }
-    tokenize(dirname);
-    for (i = 0; i < n; i++) {
-        pmip = iget(dev, search(pmip, name[i]));
-    }
-
-
-    // //check pmip ->INODE is a DIR
+    // Get parent mip
+    char* parent = dirname(pathname); 
+    pino = getino(parent);
+    pmip = iget(dev, pino);
 
 ;
     if(S_ISDIR(pmip->INODE.i_mode)) // check if DIR
@@ -67,18 +40,19 @@ int my_mkdir(char *pathname)
         return -1;
     }    
 
-    printf("ino = %d, base = %s", pino, base);
+    printf("ino = %d, child = %s", pino, child);
 
     /*4. // basename must not exist in parent DIR:*/
-    if(search(&pmip->INODE, base))
+    if(search(&pmip->INODE, child))
     {
         printf("mkdir: BaseName already exists in directory\n");
         return -1;
     }
 
     /*5. call kmkdir(pmip, basename) to create a DIR;
-    kmkdir() consists of 4 major steps:*/    
-    kmkdir(pmip, base, pino);
+    kmkdir() consists of 4 major steps:*/  
+
+    kmkdir(pmip, child, pino);
 
     //6. increment parent INODE's link_count by 1 and mark pmip dirty;
     pmip->dirty = 1;
