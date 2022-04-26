@@ -68,6 +68,17 @@ typedef struct mtable{
   char mntName[64]; // mount point DIR name
 }MTABLE;
 
-
+// ADD this to type.h: Mount Table structure
+typedef struct Mount{
+  int    dev;       // dev (opened vdisk fd number) 0 means FREE 
+  int    ninodes;   // from superblock
+  int    nblocks;
+  int    bmap;      // from GD block  
+  int    imap;
+  int    iblk;
+  struct Minode *mounted_inode;
+  char   name[64];  // device name, e.g. mydisk
+  char   mount_name[64]; // mounted DIR pathname
+} MOUNT;
 
 #endif
