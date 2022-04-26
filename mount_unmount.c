@@ -9,7 +9,8 @@
 
 #include "functions.h"
 
-MOUNT mountTablep[8]; // set all dev = 0 in init()
+extern int nblocks, ninodes, bmap, imap, iblk;
+extern MOUNT mountTablep[8];
 
 // Modify mount_root(): Use mountTable[0] to record
 //   dev, ninodes, nblocks, bmap, imap, iblk of root device
@@ -17,8 +18,9 @@ MOUNT mountTablep[8]; // set all dev = 0 in init()
 // write a MOUNT *getmptr(int dev) function, which returns a
 //	  pointer to dev's mountTable[] entry
 
-int mount()    /*  Usage: mount filesys mount_point OR mount */
+int mount(char* pathname)    /*  Usage: mount filesys mount_point OR mount */
 {
+    int newdev;
 
     // 1. Ask for filesys (a virtual disk) and mount_point (a DIR pathname).
     //    If no parameters: display current mounted filesystems.
@@ -32,21 +34,36 @@ int mount()    /*  Usage: mount filesys mount_point OR mount */
     //    Check whether it's an EXT2 file system: if not, reject.
 
     // 4. For mount_point: find its ino, then get its minode:
-    //     ino  = getino(pathname);  // get ino:
-    //     mip  = iget(dev, ino);    // get minode in memory;    
+    int ino  = getino(pathname);  // get ino:
+    MINODE *mip  = iget(dev, ino);    // get minode in memory;    
 
     // 5. Verify mount_point is a DIR.  // can only mount on a DIR, not a file  
     //    Check mount_point is NOT busy (e.g. can't be someone's CWD)
+    //mountTablep[0].mounted_inode
+    if(S_ISDIR(mip->INODE.i_mode)) // CHECK IF DIR
+        {
+        printf("mkdir: Valid Dirname\n");
+    }
+    else
+    {
+        printf("mkdir: Invalid Dirname\n");
+        return -1;
+    }    
 
     // 6. Allocate a FREE (dev=0) mountTable[] for newdev;
 
     //    Record new DEV, ninodes, nblocks, bmap, imap, iblk in mountTable[] 
-
+    mountTablep[0].dev = mip->dev;
+    mountTablep[0].ninodes = ninodes;
+    mountTablep[0].nblocks = nblocks;
+    mountTablep[0].bmap = bmap;
+    mountTablep[0].imap = imap;
+    mountTablep[0].iblk = iblk;
 
     // 7. Mark mount_point's minode as being mounted on and let it point at the
     //    MOUNT table entry, which points back to the mount_point minode.
 
-    //    return 0 for SUCCESS;
+    //return 0 for SUCCESS;
     return 0;
 }
   

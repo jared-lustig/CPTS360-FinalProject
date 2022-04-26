@@ -34,10 +34,7 @@ int nblocks, ninodes, bmap, imap, iblk;
 char line[128], cmd[32], pathname[128], third[128];
 OFT init_oft[10];
 
-// #include "cd_ls_pwd.c"
-// #include "alloc.c"
-// #include "mkdir_creat.c"
-// #include "rmdir.c"
+MOUNT mountTablep[8]; // set all dev = 0 in init()
 
 int init()
 {
@@ -68,6 +65,11 @@ int init()
   for (i = 0; i < NOFT; i++)
   {
     oft[i].refCount = 0;
+  }
+
+  for (i = 0; i < 8; i++)
+  {
+    mountTablep[i].dev = 0;
   }
 }
 
