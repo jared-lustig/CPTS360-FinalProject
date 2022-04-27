@@ -181,6 +181,12 @@ int getino(char *pathname)
       printf("===========================================\n");
       printf("getino: i=%d name[%d]=%s\n", i, i, name[i]);
  
+      if (mip->mounted == 1)
+      {
+         dev = 4;
+         iget(dev, mip->mptr);
+      }
+
       ino = search(mip, name[i]);
 
       if (ino==0){

@@ -34,7 +34,7 @@ int nblocks, ninodes, bmap, imap, iblk;
 char line[128], cmd[32], pathname[128], third[128];
 OFT init_oft[10];
 
-MOUNT mountTablep[8]; // set all dev = 0 in init()
+MTABLE mountTablep[8]; // set all dev = 0 in init()
 
 int init()
 {
@@ -129,7 +129,7 @@ int main(int argc, char *argv[ ])
   // WRTIE code here to create P1 as a USER process
   
   while(1){
-    printf("input command : [ls|cd|pwd|mkdir|creat|rmdir|link|unlink|symlink|readlink|chmod|utime|stat|\nread|cat|quit] ");
+    printf("input command : [ls|cd|pwd|mkdir|creat|rmdir|link|unlink|symlink|readlink\n|chmod|utime|stat|read|cat|mount|quit] ");
     fgets(line, 128, stdin);
     line[strlen(line)-1] = 0;
 
@@ -193,6 +193,10 @@ int main(int argc, char *argv[ ])
       int mv_src = atoi(pathname);
       int mv_dest = atoi(third);
       my_lseek(mv_src, mv_dest);
+    }
+    else if(strcmp(cmd, "mount") == 0)
+    {
+      my_mount(pathname, third);
     }
     else if (strcmp(cmd, "quit")==0)
        quit();

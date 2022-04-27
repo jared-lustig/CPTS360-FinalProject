@@ -14,7 +14,8 @@ typedef struct ext2_dir_entry_2 DIR;
 SUPER *sp;
 GD    *gp;
 INODE *ip;
-DIR   *dp;   
+DIR   *dp;  
+
 
 #define FREE        0
 #define READY       1
@@ -67,18 +68,5 @@ typedef struct mtable{
   char devName[64]; //device name
   char mntName[64]; // mount point DIR name
 }MTABLE;
-
-// ADD this to type.h: Mount Table structure
-typedef struct Mount{
-  int    dev;       // dev (opened vdisk fd number) 0 means FREE 
-  int    ninodes;   // from superblock
-  int    nblocks;
-  int    bmap;      // from GD block  
-  int    imap;
-  int    iblk;
-  MINODE *mounted_inode;
-  char   name[64];  // device name, e.g. mydisk
-  char   mount_name[64]; // mounted DIR pathname
-} MOUNT;
 
 #endif

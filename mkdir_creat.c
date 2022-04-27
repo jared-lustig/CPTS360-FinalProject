@@ -20,14 +20,20 @@ int my_mkdir(char *pathname)
     MINODE *pmip;
     int pino;
     int i;
+
     // get child name
     tokenize(pathname);
     char *child = name[n-1];
 
     // Get parent mip
-    char* parent = dirname(pathname); 
-    pino = getino(parent);
-    pmip = iget(dev, pino);
+    if (strchr(pathname, '/') == 0) {
+        char *parent = dirname(pathname); 
+        pino = getino(parent);
+        pmip = iget(dev, pino);
+    }
+    else {
+        pmip = running->cwd;
+    }
 
 ;
     if(S_ISDIR(pmip->INODE.i_mode)) // check if DIR

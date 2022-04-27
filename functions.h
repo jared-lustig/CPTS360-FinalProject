@@ -102,4 +102,8 @@ int mycp(char* pathname, char* destination);
 
 int my_mv(char* src, char* dest);
 
+//mount_unmount.c
+// Mounts drive
+int my_mount(char* pathname, char *third);
+
 #endif

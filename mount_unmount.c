@@ -9,8 +9,7 @@
 
 #include "functions.h"
 
-extern int nblocks, ninodes, bmap, imap, iblk;
-extern MOUNT mountTablep[8];
+extern MTABLE mountTablep[8];
 
 // Modify mount_root(): Use mountTable[0] to record
 //   dev, ninodes, nblocks, bmap, imap, iblk of root device
@@ -18,9 +17,51 @@ extern MOUNT mountTablep[8];
 // write a MOUNT *getmptr(int dev) function, which returns a
 //	  pointer to dev's mountTable[] entry
 
-int mount(char* pathname)    /*  Usage: mount filesys mount_point OR mount */
+int my_mount(char* pathname, char *third)    /*  Usage: mount filesys mount_point OR mount */
 {
-    int newdev;
+    SUPER *supa;
+    GD *ged;
+
+    int i = 0;
+    int devinitlytemp;
+    int nblocks, ninodes, bmap, imap, iblk;
+
+    int ino, fd;
+    char mbuf[BLKSIZE];
+
+    printf("disk name = %s\n", pathname);
+
+    printf("checking EXT2 FS ....");
+    if ((fd = open(pathname, O_RDWR)) < 0){
+        printf("open %s failed\n", pathname);
+        exit(1);
+    }
+
+    devinitlytemp = fd;    // global dev same as this fd   
+
+    printf("dev = %d, fd = %d\n", dev, fd);
+
+    /********** read super block  ****************/
+    bzero(mbuf, BLKSIZE);
+    get_block(devinitlytemp, 1, mbuf);
+    supa = (SUPER *)mbuf;
+
+    if (supa->s_magic != 0xEF53){
+        printf("magic = %x is not an ext2 filesystem\n", supa->s_magic);
+        exit(1);
+    }     
+    printf("EXT2 FS OK\n");
+
+    ninodes = supa->s_inodes_count;
+    nblocks = supa->s_blocks_count;
+
+    get_block(dev, 2, mbuf); 
+    ged = (GD *)mbuf;
+
+    bmap = ged->bg_block_bitmap;
+    imap = ged->bg_inode_bitmap;
+    iblk = ged->bg_inode_table;
+    printf("bmp=%d imap=%d inode_start = %d\n", bmap, imap, iblk);
 
     // 1. Ask for filesys (a virtual disk) and mount_point (a DIR pathname).
     //    If no parameters: display current mounted filesystems.
@@ -33,35 +74,61 @@ int mount(char* pathname)    /*  Usage: mount filesys mount_point OR mount */
     // 3. LINUX open filesys for RW; use its fd number as the new DEV;
     //    Check whether it's an EXT2 file system: if not, reject.
 
+
+    /* verify it's an ext2 file system ***********/
+
+
+
     // 4. For mount_point: find its ino, then get its minode:
-    int ino  = getino(pathname);  // get ino:
-    MINODE *mip  = iget(dev, ino);    // get minode in memory;    
+    ino  = getino(third);  // get ino:
+    MINODE *mip  = iget(dev, ino); // get minode in memory;
+
+    printf("mip->ino = %d, running->cwd->ino = %d\n", mip->ino, running->cwd->ino);
+
+    if (mip->ino == running->cwd->ino)
+    {
+        printf("Currently in use, error\n");
+        return -1;
+    }    
+
+
 
     // 5. Verify mount_point is a DIR.  // can only mount on a DIR, not a file  
     //    Check mount_point is NOT busy (e.g. can't be someone's CWD)
     //mountTablep[0].mounted_inode
     if(S_ISDIR(mip->INODE.i_mode)) // CHECK IF DIR
         {
-        printf("mkdir: Valid Dirname\n");
+        printf("mount: Valid Dirname\n");
     }
     else
     {
-        printf("mkdir: Invalid Dirname\n");
+        printf("mount: Invalid Dirname\n");
         return -1;
     }    
 
     // 6. Allocate a FREE (dev=0) mountTable[] for newdev;
 
+    while(mountTablep[i].dev != 0)
+    {
+        i++;
+    }
+
     //    Record new DEV, ninodes, nblocks, bmap, imap, iblk in mountTable[] 
-    mountTablep[0].dev = mip->dev;
-    mountTablep[0].ninodes = ninodes;
-    mountTablep[0].nblocks = nblocks;
-    mountTablep[0].bmap = bmap;
-    mountTablep[0].imap = imap;
-    mountTablep[0].iblk = iblk;
+    mountTablep[i].dev = devinitlytemp;
+    mountTablep[i].ninodes = ninodes;
+    mountTablep[i].nblocks = nblocks;
+    mountTablep[i].bmap = bmap;
+    mountTablep[i].imap = imap;
+    //mountTablep[i].iblk = iblk;
 
     // 7. Mark mount_point's minode as being mounted on and let it point at the
     //    MOUNT table entry, which points back to the mount_point minode.
+    mip->dirty = 1;
+    mip->mounted = 1;
+    mip->mptr = mountTablep;
+    mountTablep[i].mntDirPtr = mip;
+
+    iput(mip);
 
     //return 0 for SUCCESS;
     return 0;
