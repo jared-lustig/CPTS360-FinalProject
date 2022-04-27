@@ -69,6 +69,8 @@ int findmyname(MINODE *parent, u32 myino, char myname[ ]);
 int findino(MINODE *mip, u32 *myino);
 void new_directory(int ino, int bnum, int dev);
 int ideal_len(int n);
+//For open truncate
+int truncate(MINODE *mip);
 
 //levelOneMinor.c
 

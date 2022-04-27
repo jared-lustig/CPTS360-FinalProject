@@ -51,6 +51,7 @@ int myread(int fd, char *buf, int nbytes)
       // Compute LOGICAL BLOCK number lbk and startByte in that block from offset;
 
       lbk = oftp->offset / BLKSIZE;
+      printf("\n\nlbk = %d\n\n", lbk);
       startByte = oftp->offset % BLKSIZE;
      
        // I only show how to read DIRECT BLOCKS. YOU do INDIRECT and D_INDIRECT
@@ -74,16 +75,18 @@ int myread(int fd, char *buf, int nbytes)
            //printf("read: double indirect block\n");
             //  double indirect blocks
             char buf2[256];
-            char buf3[256];
+            //char buf3[256];
             
             get_block(oftp->minodePtr->dev, oftp->minodePtr->INODE.i_block[13], buf2);
             int *single_i = (int *)buf2;
             get_block(oftp->minodePtr->dev, single_i[0], (char *)idd);
-            int *double_i = (int *)buf3;
+            //int *double_i = (int *)buf3;
             blk = idd[lbk - 256 - 12];
 
             //printf("lbk = %d IDblk = %d blk = %d\n", lbk, oftp->minodePtr->INODE.i_block[13], blk);
         } 
+
+
 
        /* get the data block into readbuf[BLKSIZE] */
        get_block(oftp->minodePtr->dev, blk, readbuf);

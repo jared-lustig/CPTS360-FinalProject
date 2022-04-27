@@ -287,3 +287,23 @@ int ideal_len(int n)
 {
    return 4 * ((8 + n + 3) / 4);
 }
+
+int truncate(MINODE *mip)
+{
+   int i;
+   char buf[BLKSIZE];
+   // Direct Release
+   for (i = 0; i < 12; i++)
+   {
+      get_block(mip->dev, mip->INODE.i_block[0], buf);
+      memset(buf, 0, BLKSIZE);
+      put_block(mip->dev, mip->INODE.i_block[i], buf);
+      memset(buf, 0, BLKSIZE);
+   }
+   mip->dirty = 1;
+   mip->INODE.i_size = 0;
+   //iput(mip);
+
+   // Sucess return
+   return 0;
+}
