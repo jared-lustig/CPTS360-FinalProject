@@ -26,20 +26,21 @@ int my_mkdir(char *pathname)
     int i;
 
     // get child name
+    char *child;
     tokenize(pathname);
-    char *child = name[n-1];
+    strcpy(child ,name[n-1]);
 
     // Get parent mip
-    if (strchr(pathname, '/') == 0) {
+    if (strchr(pathname, '/') != 0) {
         char *parent = dirname(pathname); 
         pino = getino(parent);
         pmip = iget(dev, pino);
+        printf("parent = %s, child = %s\n", parent, child); 
     }
     else {
         pmip = running->cwd;
     }
 
-;
     if(S_ISDIR(pmip->INODE.i_mode)) // check if DIR
     {
         printf("mkdir: Valid Dirname\n");
@@ -134,6 +135,7 @@ int kmkdir(MINODE *pmip, char *base, int pino)
 /* Does the same thing as My_mkdir, except it checks to see if pathname (i_mode) is a file */
 int my_creat(char *pathname)
 {
+    //printf("inside my_creat ------------------------\n");
     //This is similar to mkdir() except
     //(1). the INODE.i_mode field is set to Reg file type, permission bits set to 0644 for rw-r--r--, and
     //(2). no data block is allocated for it, so the file size is 0.
@@ -152,21 +154,25 @@ int my_creat(char *pathname)
 
     /*2. divide pathname into dirname and basename;*/
     // get child name
+    char child[64];
     tokenize(pathname);
-    char *child = name[n-1];
+        //printf("===============================\n");
+    strcpy(child ,name[n-1]);
+
+    child[strlen(child)] = '\0';
 
     // Get parent mip
-    if (strchr(pathname, '/') == 0) {
+    if (strchr(pathname, '/') != 0) {
         char *parent = dirname(pathname); 
         pino = getino(parent);
         pmip = iget(dev, pino);
-        printf("dirname = %s, base = %s\n", parent, child);
+        printf("parent = %s, child = %s\n", parent, child); 
     }
     else {
         pmip = running->cwd;
     }
 
-    //     char dirname[64], base[64];
+    // char dirname[64], base[64];
     // int i;
     // for(i = strlen(pathname); pathname[i] != '/' && i != 0; i--);
     // if(i == 0) // if you are making directory within root directory

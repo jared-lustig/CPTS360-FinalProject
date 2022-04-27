@@ -185,6 +185,7 @@ int getino(char *pathname)
       {
          dev = 4;
          iget(dev, mip->mptr);
+         printf("Does this shit fuck up\n");
       }
 
       ino = search(mip, name[i]);
