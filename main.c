@@ -153,9 +153,7 @@ int main(int argc, char *argv[ ])
     }
     else if (strcmp(cmd, "creat") == 0)
     {
-      if(pathname[0] == '\0')
-        pathname[0] = '/';
-      my_creat(pathname);
+      my_creat(pathname); //pathname must have a / in front of file to make it
     }
     else if (strcmp(cmd, "rmdir") == 0)
        my_rmdir(pathname);

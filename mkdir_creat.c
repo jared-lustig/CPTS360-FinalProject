@@ -15,6 +15,10 @@ extern int n;
 extern MINODE *root;
 extern PROC *running;
 
+/* My_Mkdir takes a pathname, gets the directory you plan on making the directory in. And the name of the new directory
+1. Checks to see if dir is a dir, and if it exist
+2. Passes into helper function where it initializes directory variables
+3. Marks the MINODE as dirty, adds to the links the directory has, and puts the inode back signifying a change in the directory*/
 int my_mkdir(char *pathname)
 {
     MINODE *pmip;
@@ -68,6 +72,13 @@ int my_mkdir(char *pathname)
    return 0;
 }
 
+
+/* kmkdir takes a minode, name of the new directory, and the parent ino
+1. allocates a new inode, seaches ino and puts it in MINODE mip
+2. saves required data into mip -> mode, uid, gid, size, links = 2 (because of . and ..), atime (time when file was made), blocks, and bno
+3. Using DIR dp, you create . and ..
+4. put the block into memory
+5. call enter_name to traverse throught the block to save it to the last instance, and to allocate the rest of the disk space to that entry*/
 int kmkdir(MINODE *pmip, char *base, int pino)
 {
     char buf[BLKSIZE];
@@ -120,13 +131,15 @@ int kmkdir(MINODE *pmip, char *base, int pino)
     return 0;
 }
 
-
+/* Does the same thing as My_mkdir, except it checks to see if pathname (i_mode) is a file */
 int my_creat(char *pathname)
 {
     //This is similar to mkdir() except
     //(1). the INODE.i_mode field is set to Reg file type, permission bits set to 0644 for rw-r--r--, and
     //(2). no data block is allocated for it, so the file size is 0.
     //(3). Do not increment parent INODE's links_count
+    MINODE *pmip;
+    int pino;
 
     MINODE *mip = root;
     // 1. if (pathname is absolute) dev = root->dev;
@@ -138,25 +151,37 @@ int my_creat(char *pathname)
     dev = mip->dev;
 
     /*2. divide pathname into dirname and basename;*/
-    char dirname[64], base[64];
-    int i;
-    for(i = strlen(pathname); pathname[i] != '/' && i != 0; i--);
-    if(i == 0) // if you are making directory within root directory
-    {
-        strcpy(base, pathname);
-        strcpy(dirname, "/");
+    // get child name
+    tokenize(pathname);
+    char *child = name[n-1];
+
+    // Get parent mip
+    if (strchr(pathname, '/') == 0) {
+        char *parent = dirname(pathname); 
+        pino = getino(parent);
+        pmip = iget(dev, pino);
+        printf("dirname = %s, base = %s\n", parent, child);
     }
-    else // if new directory has path included
-    {
-        strcpy(base, &pathname[i+1]);
-        strncpy(dirname, pathname, i+1);
+    else {
+        pmip = running->cwd;
     }
-    
-    printf("dirname = %s, base = %s\n", dirname, base);
+
+    //     char dirname[64], base[64];
+    // int i;
+    // for(i = strlen(pathname); pathname[i] != '/' && i != 0; i--);
+    // if(i == 0) // if you are making directory within root directory
+    // {
+    //     strcpy(base, pathname);
+    //     strcpy(dirname, "/");
+    // }
+    // else // if new directory has path included
+    // {
+    //     strcpy(base, &pathname[i+1]);
+    // }
 
     //3. // dirname must exist and is a DIR:
-    int pino = getino(dirname);
-    MINODE *pmip = iget(dev, pino);
+    // int pino = getino(dirname);
+    // MINODE *pmip = iget(dev, pino);
     // //check pmip ->INODE is a DIR
 ;
     if(S_ISDIR(pmip->INODE.i_mode)) // check if File
@@ -169,10 +194,10 @@ int my_creat(char *pathname)
         return -1;
     }    
 
-    printf("ino = %d, base = %s", pino, base);
+    printf("ino = %d, base = %s", pino, child);
 
     /*4. // basename must not exist in parent DIR:*/
-    if(search(&pmip->INODE, base))
+    if(search(&pmip->INODE, child))
     {
         printf("mkdir: BaseName already exists in directory\n");
         return -1;
@@ -180,7 +205,7 @@ int my_creat(char *pathname)
 
     /*5. call kmkdir(pmip, basename) to create a DIR;
     kmkdir() consists of 4 major steps:*/    
-    kcreat(pmip, base, pino);
+    kcreat(pmip, child, pino);
 
     //6. increment parent INODE's link_count by 1 and mark pmip dirty;
     pmip->dirty = 1;
@@ -190,6 +215,13 @@ int my_creat(char *pathname)
    return 0;
 }
 
+/* kcreat does the same thing as kmkidr except it makes a file instead of a directory
+1. file size = 0
+2. i_block = 0
+3. links = 1
+marks as dirty so that we know stuff was changed
+puts(minode) into memory
+enter name will then do the same thing as with mkdir, traverse through and add the rest of the disk space to the last file*/
 int kcreat(MINODE *pmip, char *base, int pino)
 {
     char buf[BLKSIZE];
