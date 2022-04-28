@@ -71,6 +71,7 @@ void new_directory(int ino, int bnum, int dev);
 int ideal_len(int n);
 //For open truncate
 int truncate(MINODE *mip);
+int pfd();
 
 //levelOneMinor.c
 
