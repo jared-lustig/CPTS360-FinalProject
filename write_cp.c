@@ -17,7 +17,7 @@ int write_file(char* pathname)
     //   1. Preprations:
     //      ask for a fd   and   a text string to write;
 
-    // cp src dest:
+    // Bad way of parsing the dirname and base name
     char dirname[64], base[64];
     int i;
     for(i = strlen(pathname); pathname[i] != '/' && i != 0; i--);
@@ -58,7 +58,7 @@ int mywrite(int fd, char buf[ ], int nbytes)
     int remain;
    // int count = 0;
 
-
+    // Gets the oft into memory as it contains directory information
     OFT *oftp = running->fd[fd];
 
     int offset = oftp->offset;
@@ -67,7 +67,7 @@ int mywrite(int fd, char buf[ ], int nbytes)
     MINODE *mip = oftp->minodePtr;
     INODE *ip = &mip;
 
-    int ib[BLKSIZE / sizeof(int)], id[BLKSIZE / sizeof(int)];
+    int ib[256], id[256]; // for the indirect and double indirect blocks
 
     int buf13[256]; // buf13[] = |D0|D1|D2|...|
 
@@ -100,12 +100,17 @@ int mywrite(int fd, char buf[ ], int nbytes)
               if (ip->i_block[12] == 0){
                   //allocate a block for it;
                   //zero out the block on disk !!!!
+
+                  // Allocates a spot for the new block
                   mip->INODE.i_block[12] = balloc(mip->dev);
+                  // Gets indirect block into memory
                   get_block(mip->dev, mip->INODE.i_block[12], ibuf);
+                  // sets block to 0's
                   memset(ibuf, 0, BLKSIZE);
+                  // puts the block back into memory
                   put_block(mip->dev, mip->INODE.i_block[12], ibuf);
               }
-              memset(ib, 0, BLKSIZE / sizeof(int));
+              memset(ib, 0, 256); // Resets the memory
               get_block(mip->dev, mip->INODE.i_block[12], (char *)ib);
               //get i_block[12] into an int ibuf[BLKSIZE];
               blk = ib[lbk - 12];
@@ -113,11 +118,11 @@ int mywrite(int fd, char buf[ ], int nbytes)
                  //allocate a disk block;
                  //record it in i_block[12];
                  blk = balloc(mip->dev);
-                 get_block(mip->dev, blk, wbuf);
-                 bzero(wbuf, BLKSIZE);
-                 put_block(mip->dev, blk, wbuf);
-                 ib[lbk - 12] = blk;
-                 put_block(mip->dev, mip->INODE.i_block[12], (char *)ib);
+                 get_block(mip->dev, blk, wbuf); // gets block
+                 bzero(wbuf, BLKSIZE); // sets to 0
+                 put_block(mip->dev, blk, wbuf); // puts fresh block
+                 ib[lbk - 12] = blk; // blk is equal to the new block
+                 put_block(mip->dev, mip->INODE.i_block[12], (char *)ib); // puts the indirect block into memory
               }
               //printf("\nblk inside indirect direct block = %d\n", blk);
               
@@ -128,12 +133,12 @@ int mywrite(int fd, char buf[ ], int nbytes)
             int *idd[256];
             printf("\n\nwriting to double indirect block\n\n");
             char dbuf[256];
-            memset(dbuf, 0,  256);
-            get_block(mip->dev, mip->INODE.i_block[13], dbuf);
-            int *single_i = (int *)dbuf; 
-            get_block(mip->dev, single_i[0], (char *)idd);
-            blk = idd[lbk - 256 - 12];
-            put_block(mip->dev, mip->INODE.i_block[13], (char *)idd);
+            memset(dbuf, 0,  256); // sets to fresh memory
+            get_block(mip->dev, mip->INODE.i_block[13], dbuf); // sets buffer to indirect
+            int *single_i = (int *)dbuf;  // saves indirect
+            get_block(mip->dev, single_i[0], (char *)idd); // gets double indirect
+            blk = idd[lbk - 256 - 12]; // saves blk to double indirect spot
+            put_block(mip->dev, mip->INODE.i_block[13], (char *)idd); // put double indirect block back
         }
      //memset(wbuf, 0, BLKSIZE);
      /* all cases come to here : write to the data block */
@@ -166,6 +171,8 @@ int mywrite(int fd, char buf[ ], int nbytes)
   return nbytes;
 }
 
+
+/* takes old name and new name, opens old name for read, opens new name for write*/
 int mycp(char* pathname, char* destination)
 {
     if (*destination == "\0")

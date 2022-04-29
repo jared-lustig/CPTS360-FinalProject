@@ -28,6 +28,7 @@ int read_file(int fd, char *buf, int nbytes)
     return (myread(fd, buf, nbytes));
 }
 
+/* reads information from a file */
 int myread(int fd, char *buf, int nbytes)
 {
     //1. 
@@ -50,9 +51,11 @@ int myread(int fd, char *buf, int nbytes)
 
       // Compute LOGICAL BLOCK number lbk and startByte in that block from offset;
 
-      lbk = oftp->offset / BLKSIZE;
-      printf("\n\nlbk = %d\n\n", lbk);
-      startByte = oftp->offset % BLKSIZE;
+        // below is the main mans algorithm
+      lbk = oftp->offset / BLKSIZE; // gets logical blk number
+      startByte = oftp->offset % BLKSIZE; // gets the startByte 
+
+     //printf("\n\nlbk = %d\n\n", lbk);
      
        // I only show how to read DIRECT BLOCKS. YOU do INDIRECT and D_INDIRECT
        
@@ -65,8 +68,9 @@ int myread(int fd, char *buf, int nbytes)
             //printf("read: indirect block\n");
             int ib[256];
             
+            // gets the indirect block from the direct block (indirect blocks start at 12)
             get_block(oftp->minodePtr->dev, oftp->minodePtr->INODE.i_block[12], (char *)ib);
-            int ibno = ib[lbk - 12];
+            int ibno = ib[lbk - 12]; // will traverse each block number by 12 as each item has 12 bytes asigned to it
             blk = ibno;
             //printf("lbk = %d IDblk = %d blk = %d\n", lbk, oftp->minodePtr->INODE.i_block[12], blk);
        }
@@ -77,24 +81,26 @@ int myread(int fd, char *buf, int nbytes)
             char buf2[256];
             //char buf3[256];
             
+            // gets the indirect block for the double indirect blocks (which start at 13)
             get_block(oftp->minodePtr->dev, oftp->minodePtr->INODE.i_block[13], buf2);
+            // saves the single indirect block
             int *single_i = (int *)buf2;
+            // gets the double indirect block from the single indirect block saved
             get_block(oftp->minodePtr->dev, single_i[0], (char *)idd);
             //int *double_i = (int *)buf3;
-            blk = idd[lbk - 256 - 12];
+            blk = idd[lbk - 256 - 12]; // 256 spaces blocks in double indirect, lbk - 256 - 12 will start at 0, and work it's way up through the double indirects
 
             //printf("lbk = %d IDblk = %d blk = %d\n", lbk, oftp->minodePtr->INODE.i_block[13], blk);
         } 
 
-
-
-       /* get the data block into readbuf[BLKSIZE] */
+       // gets the block from above using blk and puts in the readbuf
        get_block(oftp->minodePtr->dev, blk, readbuf);
        
        /* copy from startByte to buf[ ], at most remain bytes in this block */
        char *cp = readbuf + startByte;   
        remain = BLKSIZE - startByte;   // number of bytes remain in readbuf[]
         
+        // will there is space in the block, save the readbuf into buf
        while (remain > 0){
             *cq++ = *cp++;             // copy byte from readbuf[] into buf[]
              oftp->offset++;           // advance offset 
@@ -114,9 +120,13 @@ int myread(int fd, char *buf, int nbytes)
    return count;   // count is the actual number of bytes read
 }
 
+
+/* Will display file information to the terminal */
 int mycat(char *pathname)
 {
 //   cat filename:
+
+    // Bad way of parsing the directory name from the base name
     char dirname[64], base[64];
     int i;
     for(i = strlen(pathname); pathname[i] != '/' && i != 0; i--);
@@ -136,20 +146,21 @@ int mycat(char *pathname)
     char mybuf[BLKSIZE], dummy = 0;  // a null char at end of mybuf[ ]
     int n;
 
-    //   1. 
+    //   1. Opens the file for read given the file name
     int fd = open_file(base, 0); // currently returns -1, guessing it is reading from current directory rather than mkdisk, may need actual open for it to work.
 
     printf("fd = %d\n", fd);
     //int fd = myopen(base, "0");
     //   2. 
 
+    // will loop until file size is 0
     while( n = read_file(fd, mybuf, BLKSIZE)){
        mybuf[n] = 0;             // as a null terminated string
        printf("%s", mybuf);   //<=== THIS works but not good
-       memset(mybuf, 0, BLKSIZE);
+       memset(mybuf, 0, BLKSIZE); // resets buffer so it can be copied 
        //spit out chars from mybuf[ ] but handle \n properly;
     } 
 //   3. close(fd);
-    close(fd);
+    close(fd); // closes the file and iterates the refcount by 1
     return 0;
 }
