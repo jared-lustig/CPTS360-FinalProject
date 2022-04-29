@@ -80,7 +80,7 @@ int mount_root()
   root = iget(dev, 2);
 }
 
-char *disk = "disk2";
+char *disk = "mydisk";
 int main(int argc, char *argv[ ])
 {
   int ino;
@@ -148,13 +148,9 @@ int main(int argc, char *argv[ ])
     else if (strcmp(cmd, "pwd")==0)
        pwd(running->cwd);
     else if (strcmp(cmd, "mkdir") == 0)
-    {
       my_mkdir(pathname);
-    }
     else if (strcmp(cmd, "creat") == 0)
-    {
       my_creat(pathname); //pathname must have a / in front of file to make it
-    }
     else if (strcmp(cmd, "rmdir") == 0)
        my_rmdir(pathname);
     else if (strcmp(cmd, "link")==0)
@@ -193,9 +189,9 @@ int main(int argc, char *argv[ ])
       my_lseek(mv_src, mv_dest);
     }
     else if(strcmp(cmd, "mount") == 0)
-    {
       my_mount(pathname, third);
-    }
+    else if(strcmp(cmd, "pfd") == 0)
+      pfd(pathname, third);
     else if (strcmp(cmd, "quit")==0)
        quit();
   }

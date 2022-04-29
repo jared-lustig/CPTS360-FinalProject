@@ -307,3 +307,12 @@ int truncate(MINODE *mip)
    // Sucess return
    return 0;
 }
+
+int pfd() {
+   int i = 0;
+   printf("open fd's:\n");
+   while (running->fd[i] && i < 10) {
+      printf("fd = %d\n", i);
+      i++;
+   }
+}
