@@ -9,6 +9,14 @@
 
 #include "functions.h"
 
+
+/* 1. Gets number of location of directory, sets data to mip
+   2. Verifies we are deleteing a directory
+   3. Verifies directory is empty before deleting
+   4. Gets number of location of parent directory
+   5. Gets name of directory
+   6. Removes directory by checking first, last, and middle cases
+   7. Sets dirty to notify changes, iterate down by 1, put changes, deallocate block number*/
 int my_rmdir(char *pathname)
 {
    //(1). get in-memory INODE of pathname:
@@ -30,7 +38,7 @@ int my_rmdir(char *pathname)
 
    mip->refCount = 1;
 
-   //Dir is empty
+   // (3) Dir is empty
    if(mip->INODE.i_links_count > 2)
    {
       printf("DIrectory is not empty, cannot RMDIR.\n");
@@ -38,12 +46,12 @@ int my_rmdir(char *pathname)
       return -1;
    }
 
-   //(3). /* get parent’s ino and inode */
+   //(4). /* get parent’s ino and inode */
    int pino = findino(mip, &ino); //get pino from .. entry in INODE.i_block[0]
    MINODE *pmip = iget(mip->dev, pino);   
 
    char *name;
-   //(4). /* get name from parent DIR’s data block
+   //(5). /* get name from parent DIR’s data block
    findmyname(pmip, ino, name); //find name from parent DIR338
    
    printf("name - %s\n", name);
@@ -108,24 +116,24 @@ void rm_child(MINODE *pmip, char *name) {
 
             return;
          }
-         else { // The node to be deleted is the first or the middle node of many
+         else { // The node to be deleted if it is the middle node of many
             printf("Middle Case...\n");
-            int size = buf + BLKSIZE - (cp + dp->rec_len);
+            int size = buf + BLKSIZE - (cp + dp->rec_len); // size is set to the blksize - middle nodes size
             int space = dp->rec_len;
 
             char *lastcp = buf;
-            DIR *lastdp = (DIR *)buf;
+            DIR *lastdp = (DIR *)buf; // temp directory to traverse to the end
 
-            while (lastcp + lastdp->rec_len < buf + BLKSIZE){ 
+            while (lastcp + lastdp->rec_len < buf + BLKSIZE){  // traverses to the end of the block
                lastcp += lastdp->rec_len;
                lastdp = (DIR *)lastcp;
             }
 
-            lastdp->rec_len += space;
+            lastdp->rec_len += space; // Adds space from deleted node to the node from the middle of the block
 
-            memcpy(cp, (cp + dp->rec_len), size);
+            memcpy(cp, (cp + dp->rec_len), size); // sets cp buf to size of the rec_len
 
-            put_block(pmip->dev, pmip->INODE.i_block[i], buf);
+            put_block(pmip->dev, pmip->INODE.i_block[i], buf); // saves changes to block
             return;
          }
       }
@@ -133,6 +141,8 @@ void rm_child(MINODE *pmip, char *name) {
       prev = (DIR *)cp;
       cp += dp->rec_len;
       dp = (DIR *)cp;
+
+      // resets the temp buffer, and continues to traverse looking for the middle node 
       bzero(temp, 256);
       strncpy(temp, dp->name, dp->name_len);
       temp[dp->name_len] = 0;

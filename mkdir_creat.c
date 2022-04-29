@@ -17,7 +17,7 @@ extern PROC *running;
 
 /* My_Mkdir takes a pathname, gets the directory you plan on making the directory in. And the name of the new directory
 1. Checks to see if dir is a dir, and if it exist
-2. Passes into helper function where it initializes directory variables
+2. Passes into helper function where it initializes directory variables (creates dir . and ..)
 3. Marks the MINODE as dirty, adds to the links the directory has, and puts the inode back signifying a change in the directory*/
 int my_mkdir(char *pathname)
 {
@@ -61,7 +61,7 @@ int my_mkdir(char *pathname)
     }
 
     /*5. call kmkdir(pmip, basename) to create a DIR;
-    kmkdir() consists of 4 major steps:*/  
+    kmkdir() consists of 5 major steps:*/  
 
     kmkdir(pmip, child, pino);
 
@@ -84,13 +84,13 @@ int kmkdir(MINODE *pmip, char *base, int pino)
 {
     char buf[BLKSIZE];
     //5-1. allocate an INODE and a disk block:
-    int ino = ialloc(dev), bno = balloc(dev);
+    int ino = ialloc(dev), bno = balloc(dev); // ino responsable for allocating current item, bno responsable for allocating the first direct block
     MINODE *mip = iget(dev,ino); // load INODE into an minode;
 
     //5-2. initialize mip->INODE as a DIR INODE;
 	/*Set all of the MINODE and INOE properties*/
 	//drwxr-xr-x
-	mip->INODE.i_mode 	  = 0x41ED; 
+	mip->INODE.i_mode 	  = 0x41ED; // mode set to directory
 	printf("i_mode set to %x\n", mip->INODE.i_mode);
 	mip->INODE.i_uid    	  = running->uid;
 	mip->INODE.i_gid  	  = running->gid;
@@ -98,6 +98,7 @@ int kmkdir(MINODE *pmip, char *base, int pino)
 	mip->INODE.i_links_count = 2; 
 	mip->INODE.i_atime       = mip->INODE.i_ctime = mip->INODE.i_mtime = time(0L);
 	mip->INODE.i_blocks      = 2;
+    // First direct block 
 	mip->INODE.i_block[0]    = bno;
 
     mip->dirty = 1;
@@ -108,22 +109,25 @@ int kmkdir(MINODE *pmip, char *base, int pino)
 
     char temp_buf[1024] = {0};
     char *cp = temp_buf;
+    // Sets to empty directory
     DIR *dp = (DIR *)temp_buf;
 
-    dp->inode = ino;
+    // First entry in block "."
+    dp->inode = ino; // sets ino to current directory
     dp->name_len = 1;
-    dp->rec_len = 12;
+    dp->rec_len = 12; // size allocated
     strcpy(dp->name, ".");
 
     cp += dp->rec_len;
     dp = (DIR *)cp;
 
-    dp->inode = pino;
+    // Second entry is ".."
+    dp->inode = pino; // sets to parent ino
     dp->name_len = 2;
-    dp->rec_len = 1024 - 12;
+    dp->rec_len = 1024 - 12; // contains rest of block size
     strcpy(dp->name, "..");
 
-    put_block(dev, bno, temp_buf);
+    put_block(dev, bno, temp_buf); // put's data into memory
 
     //5-4. enter_child(pmip, ino, basename); which enters
     //(ino, basename) as a DIR entry to the parent INODE;
@@ -150,16 +154,17 @@ int my_creat(char *pathname)
         mip = running->cwd;    
     }
     
-    dev = mip->dev;
+    dev = mip->dev; // setting dev to the current device number
 
     /*2. divide pathname into dirname and basename;*/
     // get child name
     char child[64];
     tokenize(pathname);
-        //printf("===============================\n");
     strcpy(child ,name[n-1]);
 
     child[strlen(child)] = '\0';
+
+    // If else below separates basename - child (file) from directory name - parent (/folder/)
 
     // Get parent mip
     if (strchr(pathname, '/') != 0) {
@@ -172,25 +177,9 @@ int my_creat(char *pathname)
         pmip = running->cwd;
     }
 
-    // char dirname[64], base[64];
-    // int i;
-    // for(i = strlen(pathname); pathname[i] != '/' && i != 0; i--);
-    // if(i == 0) // if you are making directory within root directory
-    // {
-    //     strcpy(base, pathname);
-    //     strcpy(dirname, "/");
-    // }
-    // else // if new directory has path included
-    // {
-    //     strcpy(base, &pathname[i+1]);
-    // }
-
-    //3. // dirname must exist and is a DIR:
-    // int pino = getino(dirname);
-    // MINODE *pmip = iget(dev, pino);
-    // //check pmip ->INODE is a DIR
+    //3. // Checks to make sure the directory you are saving the file to exist
 ;
-    if(S_ISDIR(pmip->INODE.i_mode)) // check if File
+    if(S_ISDIR(pmip->INODE.i_mode))
     {
         printf("Creat: Valid Dirname\n");
     }
@@ -203,6 +192,7 @@ int my_creat(char *pathname)
     printf("ino = %d, base = %s", pino, child);
 
     /*4. // basename must not exist in parent DIR:*/
+    // searches the directory to make sure that the name hasn't been taken
     if(search(&pmip->INODE, child))
     {
         printf("mkdir: BaseName already exists in directory\n");
@@ -213,7 +203,7 @@ int my_creat(char *pathname)
     kmkdir() consists of 4 major steps:*/    
     kcreat(pmip, child, pino);
 
-    //6. increment parent INODE's link_count by 1 and mark pmip dirty;
+    //6. increment parent INODE's link_count by 1 and mark pmip dirty so that iput can put pmip into memory
     pmip->dirty = 1;
     pmip->INODE.i_links_count = 0;
     iput(pmip);
@@ -265,45 +255,60 @@ enter_name(MINODE *pmip, int oino, char* child) {
    char *cp;
     char buf[1024];
     int i = 0;;
+
    //(1). Get parent’s data block into a buf[ ];
    INODE *ip;
-   ip = &(pmip->INODE);
+   ip = &(pmip->INODE); // ip will point to the instance of pmip->INODE
+
    get_block(dev, ip->i_block[0], buf);
+
     if (ip->i_block[i]==0) {
         printf("Error, No Memory in Data Block\n");
-        //Allocate a new data block; increment parent size by BLKSIZE;
+        //Allocate a    new data block;    increment parent size by BLKSIZE;
         //Enter new entry as the first entry in the new data block with rec_len¼BLKSIZE.
         return;
     }
     else{
         //(2). In a data block of the parent directory, each dir_entry has an ideal length
         printf("Reading Parent Inode...\n");
+
+        // Gets the block that matches the parent MINODE
         get_block(pmip->dev, pmip->INODE.i_block[i], buf);
         dp = (DIR *)buf;
         cp = buf;
         printf("Traversing Block Until Last Entry...\n");
-        while (cp + dp->rec_len < buf + BLKSIZE){
+
+        //Traverses to the end of the block
+        while (cp + dp->rec_len < buf + BLKSIZE){ 
             cp += dp->rec_len;
             dp = (DIR *)cp;
         }
         // dp NOW points at last entry in block
 
-        int ideal_length = 4*( (11 + dp->name_len)/4 );
-        int remain = dp->rec_len - ideal_length;
-        int need_length = 4*( (11 + strlen(child))/4 );
+        int ideal_length = 4*( (11 + dp->name_len)/4 ); // in order to enter a new entry of name with n_len, dp->name
+        int remain = dp->rec_len - ideal_length; // how much space remains on the current disk
+        int need_length = 4*( (11 + strlen(child))/4 ); // how much space the basename will take within the block
+
         printf("ideal length = %d\nremain = %d\nneed length = %d\ndp->rec_len = %d\nstrlen(child) = %d\noino = %d\n",ideal_length, remain, need_length, dp->rec_len, strlen(child), oino);
+        
         if (remain >= need_length){
             dp->rec_len = ideal_length;
+
+            // will traverse one more space for the new entry
             cp += dp->rec_len;
             dp = (DIR *)cp;
+
             printf("rec_len = %d, needlen = %d\n", dp->rec_len, need_length);
-            dp->inode = oino;
-            dp->rec_len = remain;
+            dp->inode = oino; // current directory identifier
+            dp->rec_len = remain; // space left within the block
             dp->name_len = strlen(child);
+
             strncpy(dp->name, child, dp->name_len);
             printf("rec_len = %d, needlen = %d\n", dp->rec_len, need_length);
             //enter the new entry as the LAST entry and 
             //trim the previous entry rec_len to its ideal_length;
+
+            //puts information into memory, buf points back at dp, saving new data
             put_block(pmip->dev, pmip->INODE.i_block[i], buf);
             return;
         }
